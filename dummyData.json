@@ -1,0 +1,121 @@
+[
+    {
+        "playerName": "The Best Player",
+        "region": "Korea",
+        "teamName": "team 1",
+        "totalKills": {
+            "attackingPosition": 100,
+            "defensivePosition": 79
+        },
+        "totalDeaths": {
+            "attackingPosition": 10,
+            "defensivePosition": 9
+        },
+        "totalAssists": {
+            "attackingPosition": 50,
+            "defensivePosition": 40
+        }
+    },
+    {
+        "playerName": "The 2nd Best Player",
+        "region": "Brazil",
+        "teamName": "team 2",
+        "totalKills": {
+            "attackingPosition": 95,
+            "defensivePosition": 50
+        },
+        "totalDeaths": {
+            "attackingPosition": 10,
+            "defensivePosition": 9
+        },
+        "totalAssists": {
+            "attackingPosition": 50,
+            "defensivePosition": 40
+        }
+    },
+    {
+        "playerName": "The 3rd Best Player",
+        "region": "India",
+        "teamName": "team 5",
+        "totalKills": {
+            "attackingPosition": 100,
+            "defensivePosition": 79
+        },
+        "totalDeaths": {
+            "attackingPosition": 10,
+            "defensivePosition": 9
+        },
+        "totalAssists": {
+            "attackingPosition": 45,
+            "defensivePosition": 39
+        }
+    },
+    {
+        "playerName": "a",
+        "region": "Germany",
+        "teamName": "team 1",
+        "totalKills": {
+            "attackingPosition": 80,
+            "defensivePosition": 79
+        },
+        "totalDeaths": {
+            "attackingPosition": 15,
+            "defensivePosition": 20
+        },
+        "totalAssists": {
+            "attackingPosition": 50,
+            "defensivePosition": 40
+        }
+    },
+    {
+        "playerName": "b",
+        "region": "USA",
+        "teamName": "team 2",
+        "totalKills": {
+            "attackingPosition": 40,
+            "defensivePosition": 50
+        },
+        "totalDeaths": {
+            "attackingPosition": 10,
+            "defensivePosition": 9
+        },
+        "totalAssists": {
+            "attackingPosition": 20,
+            "defensivePosition": 6
+        }
+    },
+    {
+        "playerName": "c",
+        "region": "UK",
+        "teamName": "team 5",
+        "totalKills": {
+            "attackingPosition": 34,
+            "defensivePosition": 50
+        },
+        "totalDeaths": {
+            "attackingPosition": 40,
+            "defensivePosition": 40
+        },
+        "totalAssists": {
+            "attackingPosition": 50,
+            "defensivePosition": 40
+        }
+    },
+    {
+        "playerName": "d",
+        "region": "Singapore",
+        "teamName": "team 1",
+        "totalKills": {
+            "attackingPosition": 20,
+            "defensivePosition": 69
+        },
+        "totalDeaths": {
+            "attackingPosition": 10,
+            "defensivePosition": 9
+        },
+        "totalAssists": {
+            "attackingPosition": 100,
+            "defensivePosition": 60
+        }
+    }
+]
