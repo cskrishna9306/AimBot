@@ -63,9 +63,10 @@ def tour_data_etl(tour):
     GAMES = {}
 
     # Function definition to load esports data from this tour into one of the above hashmaps
-    def esports_data_etl():
+    def esports_data_etl(load = False):
         # Traverse the esports-data by leagues, tournaments, teams, players, and finally games
         for file in ESPORTS_DATA:
+            # EXRTACTION PHASE
             # Download the gzip file from the source S3 bucket
             gzip_obj = s3_client.get_object(Bucket=SOURCE_S3_BUCKET, Key=f'{tour}/esports-data/{file}.json.gz')
             gzip_content = gzip_obj['Body'].read()
@@ -74,6 +75,7 @@ def tour_data_etl(tour):
             with gzip.GzipFile(fileobj=BytesIO(gzip_content), mode='rb') as gzip_file:
                 JSON = json.load(gzip_file)
 
+            # TRANSFORMATION PHASE
             match file:
                 case 'leagues':
                     for league in JSON:
@@ -86,6 +88,7 @@ def tour_data_etl(tour):
                         TOURNAMENTS[tournament['id']] = {
                             'name': tournament['name'],
                             'league_name': LEAGUES[tournament['league_id']]['name'],
+                            # NOTE: we may or may not need this
                             'region': LEAGUES[tournament['league_id']]['region']
                         }
                 case 'teams':
@@ -97,12 +100,14 @@ def tour_data_etl(tour):
                             'region': LEAGUES[team['home_league_id']]['region']
                         }
                 case 'players':
+                    # TODO: figure out logic to map the players to the right team for that year
                     pass
                 case 'mapping_data':
                     for game in JSON:
                         GAMES[game['platformGameId']] = {
                             'tournament': TOURNAMENTS[game['tournamentId']]['name'],
                             'region': LEAGUES[TOURNAMENTS[game['tournamentId']]['league_id']]['region'],
+                            # NOTE: We may or may not need the teams field since we can map each player to their respective teams with the PLAYERS dict
                             'teams': {
                                 int(localTeamID): TEAMS[teamID]['name'] for localTeamID, teamID in game['teamMapping'].items() if teamID in TEAMS
                             },
@@ -110,13 +115,20 @@ def tour_data_etl(tour):
                                 int(localPlayerID): PLAYERS[playerID]['handle'] for localPlayerID, playerID in game['participantMapping'].items() if playerID in PLAYERS
                             }
                         }
+            
+        # LOADING PHASE: Optionally LOAD players metadata into the destination S3 bucket
+        if load:        
+            # Upload the PLAYERS dictionary to our destination S3 bucket
+            s3_client.put_object(Bucket=DESTINATION_S3_BUCKET, Key=f'{tour}/player_metadata.json', Body=json.dumps(PLAYERS))
+            print(f"Uploaded {tour}' players metadata file to s3://{DESTINATION_S3_BUCKET}/{tour}/player_metadata.json")
+        
         pass
 
     def game_data_etl():
         pass
     
     # loading leagues, tournaments, teams, and players data from this tour into the cache
-    esports_data_etl()
+    esports_data_etl(load = True)
     # creating player statistics from each game
     game_data_etl()
     pass
