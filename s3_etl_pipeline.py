@@ -110,55 +110,6 @@ def tour_data_etl(tour):
                                 int(localPlayerID): PLAYERS[playerID]['handle'] for localPlayerID, playerID in game['participantMapping'].items() if playerID in PLAYERS
                             }
                         }
-        
-        # # Use the paginator to iterate over all objects within the fandom prefix
-        # for page in paginator.paginate(Bucket=SOURCE_S3_BUCKET, Prefix=f'{tour}/esports-data/'):
-        #     # Check if the page contains objects
-        #     if 'Contents' in page:
-        #         for object in page['Contents']:
-        #             key = object['Key']
-
-        #             # Download the gzip file from the source S3 bucket
-        #             gzip_obj = s3_client.get_object(Bucket=SOURCE_S3_BUCKET, Key=key)
-        #             gzip_content = gzip_obj['Body'].read()
-
-        #             # Unzip the content
-        #             with gzip.GzipFile(fileobj=BytesIO(gzip_content), mode='rb') as gzip_file:
-        #                 JSON = json.load(gzip_file)
-                    
-        #             if key.contains('leagues'):
-        #                 for league in JSON:
-        #                     LEAGUES[league['league_id']] = {
-        #                         'name': league['name'],
-        #                         'region': league['region']
-        #                     }
-        #             elif key.contains('tournaments'):
-        #                 for tournament in JSON:
-        #                     TOURNAMENTS[tournament['id']] = {
-        #                         'league_id': tournament['league_id'],
-        #                         'name': tournament['name']
-        #                     }
-        #             elif key.contains('teams'):
-        #                 for team in JSON:
-        #                     TEAMS[team['id']] = {
-        #                         'name': team['name'],
-        #                         'acronym': team['acronym'],
-        #                         'home_league_id': team['home_league_id']
-        #                     }
-        #             elif key.contains('players'):
-        #                 pass
-        #             elif key.contains('mapping_data.json'):
-        #                 for game in JSON:
-        #                     GAMES[game['platformGameId']] = {
-        #                         'tournament': TOURNAMENTS[game['tournamentId']]['name'],
-        #                         'region': LEAGUES[TOURNAMENTS[game['tournamentId']]['league_id']]['region'],
-        #                         'teams': {
-        #                             int(localTeamID): TEAMS[teamID]['name'] for localTeamID, teamID in game['teamMapping'].items() if teamID in TEAMS
-        #                         },
-        #                         'players': {
-        #                             int(localPlayerID): PLAYERS[playerID]['handle'] for localPlayerID, playerID in game['participantMapping'].items() if playerID in PLAYERS
-        #                         }
-        #                     }
         pass
 
     def game_data_etl():
