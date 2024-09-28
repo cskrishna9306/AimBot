@@ -140,11 +140,8 @@ def tour_data_etl(tour):
                 PLAYERS_W_DATES[pID] = {}
                 # iterate through key-value pairs in pInfo
                 for key, value in pInfo.items():
-                    # if isinstance(value, datetime):
-                    #     PLAYERS_W_DATES[pID][key] = value.isoformat()
-                    # else:
-                    #     PLAYERS_W_DATES[pID][key] = value
                     PLAYERS_W_DATES[pID][key] = value.isoformat() if isinstance(value, datetime) else value
+            
             # Upload the PLAYERS dictionary to our destination S3 bucket
             s3_client.put_object(Bucket=DESTINATION_S3_BUCKET, Key=f'{tour}/player_metadata.json', Body=json.dumps(PLAYERS_W_DATES))
             print(f"Uploaded {tour}' players' metadata information to s3://{DESTINATION_S3_BUCKET}/{tour}/player_metadata.json")
