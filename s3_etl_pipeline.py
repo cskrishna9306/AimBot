@@ -4,6 +4,7 @@ from io import BytesIO
 import boto3
 import botocore
 from botocore.errorfactory import ClientError
+from botocore.exceptions import NoCredentialsError, PartialCredentialsError
 from datetime import datetime
 
 # Initializing the S3 client
@@ -26,6 +27,25 @@ TOURS = {
 # the order to traverse the files in esports-data
 ESPORTS_DATA = ['leagues', 'tournaments', 'teams', 'players', 'mapping_data']
 
+# Function definition to return the unzipped data
+def extract_zipped_data(bucket, key):
+    try:
+        # Download the gzip file from the source S3 bucket
+        gzip_obj = s3_client.get_object(Bucket=bucket, Key=key)
+        gzip_content = gzip_obj['Body'].read()
+    
+        # Unzip the gzipped content
+        with gzip.GzipFile(fileobj=BytesIO(gzip_content)) as gzip_file:
+            return gzip_file.read()
+    
+    except NoCredentialsError:
+        print("Error: Credentials are not available")
+    except PartialCredentialsError:
+        print("Error: Incomplete credentials provided")
+    except Exception as e:
+        print(f"Error: {e}")
+    return
+
 # Function definition to extract zipped fandom data from the source S3 bucket, 
 # and load the unzipped data into our destination S3 bucket
 def fandom_data_etl():
@@ -36,16 +56,10 @@ def fandom_data_etl():
         if 'Contents' in page:
             for object in page['Contents']:
                 key = object['Key']
-
-                # Download the gzip file from the source S3 bucket
-                gzip_obj = s3_client.get_object(Bucket=SOURCE_S3_BUCKET, Key=key)
-                gzip_content = gzip_obj['Body'].read()
-
-                # Unzip the content
-                with gzip.GzipFile(fileobj=BytesIO(gzip_content), mode='rb') as gzip_file:
-                    # Upload the unzipped content to the destination S3 bucket
-                    s3_client.put_object(Bucket=DESTINATION_S3_BUCKET, Key=key[:-3], Body=gzip_file.read())
-                    print(f"Uploaded unzipped file to {DESTINATION_S3_BUCKET}/{key[:-3]}")
+                
+                # extract, unzip, and load the unzipped data into the destination S3 bucket
+                s3_client.put_object(Bucket=DESTINATION_S3_BUCKET, Key=key[:-3], Body=extract_zipped_data(bucket=SOURCE_S3_BUCKET, key=key))
+                print(f"Uploaded unzipped file to {DESTINATION_S3_BUCKET}/{key[:-3]}")
     return
 
 # Function definition to extract zipped tour data from the source S3 bucket,
@@ -68,14 +82,8 @@ def tour_data_etl(tour):
         # Traverse the esports-data by leagues, tournaments, teams, players, and finally games
         for file in ESPORTS_DATA:
             # EXRTACTION PHASE
-            # Download the gzip file from the source S3 bucket
-            gzip_obj = s3_client.get_object(Bucket=SOURCE_S3_BUCKET, Key=f'{tour}/esports-data/{file}.json.gz')
-            gzip_content = gzip_obj['Body'].read()
-
-            # Unzip the content
-            with gzip.GzipFile(fileobj=BytesIO(gzip_content), mode='rb') as gzip_file:
-                JSON = json.load(gzip_file)
-
+            JSON = json.loads(extract_zipped_data(SOURCE_S3_BUCKET, f'{tour}/esports-data/{file}.json.gz'))
+            
             # TRANSFORMATION PHASE
             match file:
                 case 'leagues':
@@ -117,7 +125,8 @@ def tour_data_etl(tour):
                                     'home_team_name': TEAMS[player['home_team_id']]['name'] if player['home_team_id'] in TEAMS else None,
                                     'home_team_acronym': TEAMS[player['home_team_id']]['acronym'] if player['home_team_id'] in TEAMS else None,
                                     'home_league_name': TEAMS[player['home_team_id']]['home_league_name'] if player['home_team_id'] in TEAMS else None,
-                                    'region': TEAMS[player['home_team_id']]['region'] if player['home_team_id'] in TEAMS else None
+                                    'region': TEAMS[player['home_team_id']]['region'] if player['home_team_id'] in TEAMS else None,
+                                    'game_statistics': []
                                 }
                 case 'mapping_data':
                     for game in JSON:
@@ -149,7 +158,19 @@ def tour_data_etl(tour):
         return
 
     def game_data_etl():
-        pass
+        # parse though each game within GAMES
+        for game in GAMES:
+            # check for a hit for this game within {tour}/games/[2022, 2023, 2024]
+            for year in TOURS[tour]:
+                try:
+                    s3_client.head_object(Bucket=SOURCE_S3_BUCKET, key='{tour}/games/{year}/{game}.json.gz')
+                    # upon a hit, we extract, and perform transformation on the unzipped data
+                    
+                    break
+                except botocore.exceptions.ClientError as e:
+                    pass
+            
+        return
     
     # loading leagues, tournaments, teams, and players data from this tour into the cache
     esports_data_etl()
