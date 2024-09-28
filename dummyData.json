@@ -1,121 +1,27 @@
-[
-    {
-        "playerName": "The Best Player",
-        "region": "Korea",
-        "teamName": "team 1",
-        "totalKills": {
-            "attackingPosition": 100,
-            "defensivePosition": 79
-        },
-        "totalDeaths": {
-            "attackingPosition": 10,
-            "defensivePosition": 9
-        },
-        "totalAssists": {
-            "attackingPosition": 50,
-            "defensivePosition": 40
-        }
-    },
-    {
-        "playerName": "The 2nd Best Player",
-        "region": "Brazil",
-        "teamName": "team 2",
-        "totalKills": {
-            "attackingPosition": 95,
-            "defensivePosition": 50
-        },
-        "totalDeaths": {
-            "attackingPosition": 10,
-            "defensivePosition": 9
-        },
-        "totalAssists": {
-            "attackingPosition": 50,
-            "defensivePosition": 40
-        }
-    },
-    {
-        "playerName": "The 3rd Best Player",
-        "region": "India",
-        "teamName": "team 5",
-        "totalKills": {
-            "attackingPosition": 100,
-            "defensivePosition": 79
-        },
-        "totalDeaths": {
-            "attackingPosition": 10,
-            "defensivePosition": 9
-        },
-        "totalAssists": {
-            "attackingPosition": 45,
-            "defensivePosition": 39
-        }
-    },
-    {
-        "playerName": "a",
-        "region": "Germany",
-        "teamName": "team 1",
-        "totalKills": {
-            "attackingPosition": 80,
-            "defensivePosition": 79
-        },
-        "totalDeaths": {
-            "attackingPosition": 15,
-            "defensivePosition": 20
-        },
-        "totalAssists": {
-            "attackingPosition": 50,
-            "defensivePosition": 40
-        }
-    },
-    {
-        "playerName": "b",
-        "region": "USA",
-        "teamName": "team 2",
-        "totalKills": {
-            "attackingPosition": 40,
-            "defensivePosition": 50
-        },
-        "totalDeaths": {
-            "attackingPosition": 10,
-            "defensivePosition": 9
-        },
-        "totalAssists": {
-            "attackingPosition": 20,
-            "defensivePosition": 6
-        }
-    },
-    {
-        "playerName": "c",
-        "region": "UK",
-        "teamName": "team 5",
-        "totalKills": {
-            "attackingPosition": 34,
-            "defensivePosition": 50
-        },
-        "totalDeaths": {
-            "attackingPosition": 40,
-            "defensivePosition": 40
-        },
-        "totalAssists": {
-            "attackingPosition": 50,
-            "defensivePosition": 40
-        }
-    },
-    {
-        "playerName": "d",
-        "region": "Singapore",
-        "teamName": "team 1",
-        "totalKills": {
-            "attackingPosition": 20,
-            "defensivePosition": 69
-        },
-        "totalDeaths": {
-            "attackingPosition": 10,
-            "defensivePosition": 9
-        },
-        "totalAssists": {
-            "attackingPosition": 100,
-            "defensivePosition": 60
-        }
-    }
-]
+{"capriciouS": {"stats": {"kills": {"attack": 9, "defense": 13},
+   "deaths": {"attack": 9, "defense": 7},
+   "assists": {"attack": 2, "defense": 0},
+   "revives": {"attack": 0, "defense": 0},
+   "team": 16,
+   "map": "Ascent",
+   "roundsWon": {"attack": 5, "defense": 8}}},
+ "bes": {"stats": {"kills": {"attack": 3, "defense": 15},
+   "deaths": {"attack": 10, "defense": 8},
+   "assists": {"attack": 4, "defense": 3},
+   "revives": {"attack": 0, "defense": 0},
+   "team": 16,
+   "map": "Ascent",
+   "roundsWon": {"attack": 5, "defense": 8}}},
+ "Kamiyu": {"stats": {"kills": {"attack": 8, "defense": 9},
+   "deaths": {"attack": 12, "defense": 8},
+   "assists": {"attack": 4, "defense": 6},
+   "revives": {"attack": 0, "defense": 0},
+   "team": 16,
+   "map": "Ascent",
+   "roundsWon": {"attack": 5, "defense": 8}}},
+   "mija": {"stats": {"kills": {"attack": 8, "defense": 7}, "deaths": {"attack": 12, "defense": 8}, "assists": {"attack": 3, "defense": 0}, "revives": {"attack": 0, "defense": 0}, "team": 16, "map": "Ascent", "roundsWon": {"attack": 5, "defense": 8}}},
+"rosie": {"stats": {"kills": {"attack": 13, "defense": 8}, "deaths": {"attack": 7, "defense": 9}, "assists": {"attack": 3, "defense": 6}, "revives": {"attack": 0, "defense": 0}, "team": 16, "map": "Ascent", "roundsWon": {"attack": 5, "defense": 8}}},
+"Dolph": {"stats": {"kills": {"attack": 8, "defense": 14}, "deaths": {"attack": 11, "defense": 7}, "assists": {"attack": 4, "defense": 2}, "revives": {"attack": 0, "defense": 0}, "team": 17, "map": "Ascent", "roundsWon": {"attack": 4, "defense": 7}}},
+"rosey": {"stats": {"kills": {"attack": 7, "defense": 7}, "deaths": {"attack": 10, "defense": 8}, "assists": {"attack": 4, "defense": 10}, "revives": {"attack": 0, "defense": 0}, "team": 17, "map": "Ascent", "roundsWon": {"attack": 4, "defense": 7}}},
+"Newky": {"stats": {"kills": {"attack": 8, "defense": 4}, "deaths": {"attack": 10, "defense": 8}, "assists": {"attack": 6, "defense": 4}, "revives": {"attack": 0, "defense": 0}, "team": 17, "map": "Ascent", "roundsWon": {"attack": 4, "defense": 7}}},
+"cuppycake": {"stats": {"kills": {"attack": 10, "defense": 15}, "deaths": {"attack": 11, "defense": 9}, "assists": {"attack": 7, "defense": 3}, "revives": {"attack": 0, "defense": 0}, "team": 17, "map": "Ascent", "roundsWon": {"attack": 4, "defense": 7}}}}
