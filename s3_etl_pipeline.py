@@ -4,6 +4,7 @@ from io import BytesIO
 import boto3
 import botocore
 from botocore.errorfactory import ClientError
+from datetime import datetime
 
 # Initializing the S3 client
 s3_client = boto3.client('s3')
@@ -45,7 +46,7 @@ def fandom_data_etl():
                     # Upload the unzipped content to the destination S3 bucket
                     s3_client.put_object(Bucket=DESTINATION_S3_BUCKET, Key=key[:-3], Body=gzip_file.read())
                     print(f"Uploaded unzipped file to {DESTINATION_S3_BUCKET}/{key[:-3]}")
-    pass
+    return
 
 # Function definition to extract zipped tour data from the source S3 bucket,
 # transform the data, and load player statistics into the destination S3 bucket
@@ -101,12 +102,28 @@ def tour_data_etl(tour):
                         }
                 case 'players':
                     # TODO: figure out logic to map the players to the right team for that year
-                    pass
+                    # owing to increasing complexity of keeping track of the changing teams for each player, 
+                    # we decided to only retain the most recent information of the player
+                    for player in JSON:
+                        # get the 'created_at' for this player entry
+                        date = datetime.strptime(player['updated_at'], "%Y-%m-%dT%H:%M:%SZ")
+                        if (player['id'] in PLAYERS and date > PLAYERS[player['id']]['date']) or player['id'] not in PLAYERS:
+                                PLAYERS[player['id']] = {
+                                    'handle': player['handle'],
+                                    'date': date,
+                                    'status': player['status'],
+                                    'first_name': player['first_name'],
+                                    'last_name': player['last_name'],
+                                    'home_team_name': TEAMS[player['home_team_id']]['name'] if player['home_team_id'] in TEAMS else None,
+                                    'home_team_acronym': TEAMS[player['home_team_id']]['acronym'] if player['home_team_id'] in TEAMS else None,
+                                    'home_league_name': TEAMS[player['home_team_id']]['home_league_name'] if player['home_team_id'] in TEAMS else None,
+                                    'region': TEAMS[player['home_team_id']]['region'] if player['home_team_id'] in TEAMS else None
+                                }
                 case 'mapping_data':
                     for game in JSON:
                         GAMES[game['platformGameId']] = {
                             'tournament': TOURNAMENTS[game['tournamentId']]['name'],
-                            'region': LEAGUES[TOURNAMENTS[game['tournamentId']]['league_id']]['region'],
+                            'region': TOURNAMENTS[game['tournamentId']]['region'],
                             # NOTE: We may or may not need the teams field since we can map each player to their respective teams with the PLAYERS dict
                             'teams': {
                                 int(localTeamID): TEAMS[teamID]['name'] for localTeamID, teamID in game['teamMapping'].items() if teamID in TEAMS
@@ -117,25 +134,36 @@ def tour_data_etl(tour):
                         }
             
         # LOADING PHASE: Optionally LOAD players metadata into the destination S3 bucket
-        if load:        
+        if load:
+            PLAYERS_W_DATES = {}
+            for pID, pInfo in PLAYERS.items():
+                PLAYERS_W_DATES[pID] = {}
+                # iterate through key-value pairs in pInfo
+                for key, value in pInfo.items():
+                    # if isinstance(value, datetime):
+                    #     PLAYERS_W_DATES[pID][key] = value.isoformat()
+                    # else:
+                    #     PLAYERS_W_DATES[pID][key] = value
+                    PLAYERS_W_DATES[pID][key] = value.isoformat() if isinstance(value, datetime) else value
             # Upload the PLAYERS dictionary to our destination S3 bucket
-            s3_client.put_object(Bucket=DESTINATION_S3_BUCKET, Key=f'{tour}/player_metadata.json', Body=json.dumps(PLAYERS))
-            print(f"Uploaded {tour}' players metadata file to s3://{DESTINATION_S3_BUCKET}/{tour}/player_metadata.json")
+            s3_client.put_object(Bucket=DESTINATION_S3_BUCKET, Key=f'{tour}/player_metadata.json', Body=json.dumps(PLAYERS_W_DATES))
+            print(f"Uploaded {tour}' players' metadata information to s3://{DESTINATION_S3_BUCKET}/{tour}/player_metadata.json")
         
-        pass
+        return
 
     def game_data_etl():
         pass
     
     # loading leagues, tournaments, teams, and players data from this tour into the cache
-    esports_data_etl(load = True)
+    esports_data_etl()
     # creating player statistics from each game
     game_data_etl()
-    pass
+    return
 
 if __name__ == "__main__":
     # extract, unzip, and load the fandom data
     fandom_data_etl()
 
     # extract, unzip, and transform each of the tour data
-    tour_data_etl(tour for tour in TOURS)
+    for tour in TOURS:
+        tour_data_etl(tour)
