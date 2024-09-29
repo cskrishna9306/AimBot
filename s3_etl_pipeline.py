@@ -27,6 +27,10 @@ TOURS = {
 # the order to traverse the files in esports-data
 ESPORTS_DATA = ['leagues', 'tournaments', 'teams', 'players', 'mapping_data']
 
+# agent code mappings
+with open('agent_code_mapping.json', 'r') as file:
+    AGENT_CODE_MAPPINGS = json.load(file)
+
 # Function definition to return the unzipped data
 def extract_zipped_data(bucket, key):
     try:
@@ -82,18 +86,20 @@ def tour_data_etl(tour):
         # Traverse the esports-data by leagues, tournaments, teams, players, and finally games
         for file in ESPORTS_DATA:
             # EXRTACTION PHASE
-            JSON = json.loads(extract_zipped_data(SOURCE_S3_BUCKET, f'{tour}/esports-data/{file}.json.gz'))
+            JSON_FILE = json.loads(extract_zipped_data(SOURCE_S3_BUCKET, f'{tour}/esports-data/{file}.json.gz'))
             
             # TRANSFORMATION PHASE
             match file:
                 case 'leagues':
-                    for league in JSON:
+            # if file == 'leagues':
+                    for league in JSON_FILE:
                         LEAGUES[league['league_id']] = {
                             'name': league['name'],
                             'region': league['region']
                         }
                 case 'tournaments':
-                    for tournament in JSON:
+            # elif file == 'tournaments':
+                    for tournament in JSON_FILE:
                         TOURNAMENTS[tournament['id']] = {
                             'name': tournament['name'],
                             'league_name': LEAGUES[tournament['league_id']]['name'],
@@ -101,7 +107,8 @@ def tour_data_etl(tour):
                             'region': LEAGUES[tournament['league_id']]['region']
                         }
                 case 'teams':
-                    for team in JSON:
+            # elif file == 'teams':
+                    for team in JSON_FILE:
                         TEAMS[team['id']] = {
                             'name': team['name'],
                             'acronym': team['acronym'],
@@ -109,10 +116,11 @@ def tour_data_etl(tour):
                             'region': LEAGUES[team['home_league_id']]['region']
                         }
                 case 'players':
+            # elif file == 'players':
                     # TODO: figure out logic to map the players to the right team for that year
                     # owing to increasing complexity of keeping track of the changing teams for each player, 
                     # we decided to only retain the most recent information of the player
-                    for player in JSON:
+                    for player in JSON_FILE:
                         # get the 'created_at' for this player entry
                         date = datetime.strptime(player['updated_at'], "%Y-%m-%dT%H:%M:%SZ")
                         if (player['id'] in PLAYERS and date > PLAYERS[player['id']]['date']) or player['id'] not in PLAYERS:
@@ -129,16 +137,17 @@ def tour_data_etl(tour):
                                     'game_statistics': []
                                 }
                 case 'mapping_data':
-                    for game in JSON:
+            # elif file == 'mapping_data':
+                    for game in JSON_FILE:
                         GAMES[game['platformGameId']] = {
                             'tournament': TOURNAMENTS[game['tournamentId']]['name'],
                             'region': TOURNAMENTS[game['tournamentId']]['region'],
                             # NOTE: We may or may not need the teams field since we can map each player to their respective teams with the PLAYERS dict
                             'teams': {
-                                int(localTeamID): TEAMS[teamID]['name'] for localTeamID, teamID in game['teamMapping'].items() if teamID in TEAMS
+                                int(localTeamID): teamID for localTeamID, teamID in game['teamMapping'].items() if teamID in TEAMS
                             },
                             'players': {
-                                int(localPlayerID): PLAYERS[playerID]['handle'] for localPlayerID, playerID in game['participantMapping'].items() if playerID in PLAYERS
+                                int(localPlayerID): playerID for localPlayerID, playerID in game['participantMapping'].items() if playerID in PLAYERS
                             }
                         }
             
@@ -157,19 +166,112 @@ def tour_data_etl(tour):
         
         return
 
+    # Function definition to load and transform player specific data
     def game_data_etl():
+        i = 0
         # parse though each game within GAMES
-        for game in GAMES:
+        for game, game_metadata in GAMES.items():
             # check for a hit for this game within {tour}/games/[2022, 2023, 2024]
             for year in TOURS[tour]:
                 try:
-                    s3_client.head_object(Bucket=SOURCE_S3_BUCKET, key='{tour}/games/{year}/{game}.json.gz')
-                    # upon a hit, we extract, and perform transformation on the unzipped data
+                    # EXTRACTION PHASE
+                    # check for this file within this year's directory
+                    s3_client.head_object(Bucket=SOURCE_S3_BUCKET, Key=f'{tour}/games/{year}/{game}.json.gz')
                     
+                    # upon a hit, we extract, and perform transformation on the unzipped data
+                    gameJSON = json.loads(extract_zipped_data(SOURCE_S3_BUCKET, f'{tour}/games/{year}/{game}.json.gz'))
+                    
+                    # TRANSFORMATION PHASE
+                    # Assuming players 6 - 10 are always assigned the lower team number and start as attacker (vice versa for players 1 - 5)
+                    # NOTE: DISCARD THE USE OF GAME METADATA HERE
+                    
+                    team_player_mappings = {
+                        min(game_metadata['teams'].keys()): {6, 7, 8, 9, 10},
+                        max(game_metadata['teams'].keys()): {1, 2, 3, 4, 5}
+                    }
+
+                    attacking_team = min(game_metadata['teams'].keys())
+
+                    # Hashmap containing the stats per player for this game
+                    game_summary = {
+                        localPlayerID: {
+                            'kills': {
+                                'attack': 0,
+                                'defense': 0
+                            },
+                            'deaths': {
+                                'attack': 0,
+                                'defense': 0
+                            },
+                            'assists': {
+                                'attack': 0,
+                                'defense': 0
+                            },
+                            'revives': {
+                                'attack': 0,
+                                'defense': 0
+                            },
+                            'rounds_won': {
+                                'attack': 0,
+                                'defense': 0
+                            },
+                            'map': None,
+                            'agent': None,
+                            'tournament': game_metadata['tournament'],
+                            'region': game_metadata['region'],
+                        } for localPlayerID in game_metadata['players']
+                    }
+
+                    config_handled = False
+                    # run game analytics for this game adhering with the local player and team IDs
+                    for event in gameJSON:
+                        if 'configuration' in event and not config_handled:
+                            config_handled = True
+                            
+                            for localPlayerID, value in game_summary.items():
+                                # assign map information for this game
+                                value['map'] = event['configuration']['selectedMap']['fallback']['displayName']
+                                
+                            # assign agent information per player to their respective summaries
+                            for player in event['configuration']['players']:
+                                if player['selectedAgent']['fallback']['guid'] in AGENT_CODE_MAPPINGS:
+                                    game_summary[player['playerId']['value']]['agent'] = AGENT_CODE_MAPPINGS[player['selectedAgent']['fallback']['guid']]
+                        elif 'roundStarted' in event:
+                            # if attacking team is min team number we are talking about 6 - 10
+                            # else attacking team is max team number we are talking about players 1 - 5
+                            attacking_team = event['roundStarted']['spikeMode']['attackingTeam']['value']
+                        elif 'playerDied' in event:
+                            deceasedId = event['playerDied']['deceasedId']['value']
+                            killerId = event['playerDied']['killerId']['value']
+                            game_summary[deceasedId]['deaths']['attack' if deceasedId in team_player_mappings[attacking_team] else 'defense'] += 1
+                            game_summary[killerId]['kills']['attack' if deceasedId in team_player_mappings[attacking_team] else 'defense'] += 1
+                        elif 'playerRevived' in event:
+                            pass
+                        elif 'roundDecided' in event:
+                            for player in team_player_mappings[event['roundDecided']['result']['winningTeam']['value']]:
+                                game_summary[player]['rounds_won']['attack' if player in team_player_mappings[attacking_team] else 'defense'] += 1
+                    
+                    # Joining each player's statistics from this game to their respective entries in PLAYERS
+                    for localPlayerID, playerID in game_metadata['players'].items():
+                        if playerID in PLAYERS:
+                            PLAYERS[playerID]['game_statistics'].append(game_summary[localPlayerID])
+                    
+                    print(f'Succesfully retreived player stats from {tour}/games/{year}/{game}.json.gz')
+                    i += 1
+                    # need to only find the first hit
                     break
                 except botocore.exceptions.ClientError as e:
-                    pass
+                    if year == 2024:
+                        print(f'Error: File for {game} not found')
             
+            if i == 100:
+                break
+
+        # LOADING PHASE
+        # Upload the PLAYERS dictionary to our destination S3 bucket
+        s3_client.put_object(Bucket=DESTINATION_S3_BUCKET, Key=f'{tour}/player_statistics.json', Body=json.dumps(PLAYERS))
+        print(f"Uploaded {tour}' players' metadata information to s3://{DESTINATION_S3_BUCKET}/{tour}/player_statistics.json")
+
         return
     
     # loading leagues, tournaments, teams, and players data from this tour into the cache
@@ -182,6 +284,6 @@ if __name__ == "__main__":
     # extract, unzip, and load the fandom data
     fandom_data_etl()
 
-    # extract, unzip, and transform each of the tour data
+    # extract, unzip, and transform each tour data
     for tour in TOURS:
         tour_data_etl(tour)
