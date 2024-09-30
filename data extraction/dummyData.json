@@ -1,0 +1,398 @@
+{
+  "1": {
+      "handle": "AceShooter01",
+      "status": "active",
+      "first_name": "Liam",
+      "last_name": "Johnson",
+      "home_team_name": "Phoenix Fire",
+      "home_league_name": "Valorant Pro League",
+      "region": "North America",
+      "game_statistics": [
+        {
+          "kills": {
+            "attack": 12,
+            "defense": 8
+          },
+          "deaths": {
+            "attack": 5,
+            "defense": 7
+          },
+          "assists": {
+            "attack": 3,
+            "defense": 4
+          },
+          "revives": {
+            "attack": 1,
+            "defense": 0
+          },
+          "rounds_won": {
+            "attack": 6,
+            "defense": 5
+          },
+          "map": "Ascent",
+          "agent": "Jett",
+          "tournament": "Valorant Champions Tour",
+          "region": "North America"
+        },
+        {
+          "kills": {
+            "attack": 14,
+            "defense": 9
+          },
+          "deaths": {
+            "attack": 6,
+            "defense": 5
+          },
+          "assists": {
+            "attack": 4,
+            "defense": 2
+          },
+          "revives": {
+            "attack": 0,
+            "defense": 1
+          },
+          "rounds_won": {
+            "attack": 7,
+            "defense": 6
+          },
+          "map": "Bind",
+          "agent": "Phoenix",
+          "tournament": "Valorant Invitational",
+          "region": "North America"
+        }
+      ]
+    },
+    "2": {
+      "handle": "BlazeMaster",
+      "status": "inactive",
+      "first_name": "Emma",
+      "last_name": "Wang",
+      "home_team_name": "Dragon Warriors",
+      "home_league_name": "Valorant Asia Championship",
+      "region": "Asia",
+      "game_statistics": [
+        {
+          "kills": {
+            "attack": 11,
+            "defense": 10
+          },
+          "deaths": {
+            "attack": 7,
+            "defense": 6
+          },
+          "assists": {
+            "attack": 5,
+            "defense": 3
+          },
+          "revives": {
+            "attack": 0,
+            "defense": 0
+          },
+          "rounds_won": {
+            "attack": 5,
+            "defense": 6
+          },
+          "map": "Haven",
+          "agent": "Reyna",
+          "tournament": "Asia Masters",
+          "region": "Asia"
+        }
+      ]
+    },
+    "3": {
+      "handle": "SilentSniper",
+      "status": "active",
+      "first_name": "Oliver",
+      "last_name": "Davis",
+      "home_team_name": "Eclipse United",
+      "home_league_name": "Valorant Europe Masters",
+      "region": "Europe",
+      "game_statistics": [
+        {
+          "kills": {
+            "attack": 15,
+            "defense": 12
+          },
+          "deaths": {
+            "attack": 6,
+            "defense": 4
+          },
+          "assists": {
+            "attack": 3,
+            "defense": 2
+          },
+          "revives": {
+            "attack": 0,
+            "defense": 1
+          },
+          "rounds_won": {
+            "attack": 7,
+            "defense": 6
+          },
+          "map": "Split",
+          "agent": "Sova",
+          "tournament": "Europe Grand Finals",
+          "region": "Europe"
+        }
+      ]
+    },
+    "4": {
+      "handle": "NightShade",
+      "status": "active",
+      "first_name": "Ava",
+      "last_name": "Martinez",
+      "home_team_name": "Shadow Assassins",
+      "home_league_name": "Valorant South American League",
+      "region": "South America",
+      "game_statistics": [
+        {
+          "kills": {
+            "attack": 10,
+            "defense": 9
+          },
+          "deaths": {
+            "attack": 7,
+            "defense": 6
+          },
+          "assists": {
+            "attack": 4,
+            "defense": 3
+          },
+          "revives": {
+            "attack": 0,
+            "defense": 0
+          },
+          "rounds_won": {
+            "attack": 5,
+            "defense": 4
+          },
+          "map": "Icebox",
+          "agent": "Omen",
+          "tournament": "LATAM Championship",
+          "region": "South America"
+        }
+      ]
+    },
+    "5": {
+      "handle": "StormRider",
+      "status": "inactive",
+      "first_name": "Noah",
+      "last_name": "Garcia",
+      "home_team_name": "Ocean Predators",
+      "home_league_name": "Valorant Oceania League",
+      "region": "Oceania",
+      "game_statistics": [
+        {
+          "kills": {
+            "attack": 8,
+            "defense": 7
+          },
+          "deaths": {
+            "attack": 6,
+            "defense": 5
+          },
+          "assists": {
+            "attack": 2,
+            "defense": 4
+          },
+          "revives": {
+            "attack": 0,
+            "defense": 0
+          },
+          "rounds_won": {
+            "attack": 4,
+            "defense": 5
+          },
+          "map": "Fracture",
+          "agent": "Breach",
+          "tournament": "Oceania Showdown",
+          "region": "Oceania"
+        }
+      ]
+    },
+    "6": {
+      "handle": "ThunderStrike",
+      "status": "active",
+      "first_name": "Sophia",
+      "last_name": "Kim",
+      "home_team_name": "Mountain Guardians",
+      "home_league_name": "Valorant Korea Pro Series",
+      "region": "Asia",
+      "game_statistics": [
+        {
+          "kills": {
+            "attack": 9,
+            "defense": 10
+          },
+          "deaths": {
+            "attack": 7,
+            "defense": 8
+          },
+          "assists": {
+            "attack": 3,
+            "defense": 4
+          },
+          "revives": {
+            "attack": 1,
+            "defense": 1
+          },
+          "rounds_won": {
+            "attack": 6,
+            "defense": 5
+          },
+          "map": "Breeze",
+          "agent": "Viper",
+          "tournament": "Korea Pro Circuit",
+          "region": "Asia"
+        }
+      ]
+    },
+    "7": {
+      "handle": "BladeRunner",
+      "status": "active",
+      "first_name": "Ethan",
+      "last_name": "Brown",
+      "home_team_name": "Desert Hawks",
+      "home_league_name": "Valorant Middle East Circuit",
+      "region": "Middle East",
+      "game_statistics": [
+        {
+          "kills": {
+            "attack": 11,
+            "defense": 9
+          },
+          "deaths": {
+            "attack": 5,
+            "defense": 6
+          },
+          "assists": {
+            "attack": 4,
+            "defense": 2
+          },
+          "revives": {
+            "attack": 0,
+            "defense": 0
+          },
+          "rounds_won": {
+            "attack": 5,
+            "defense": 6
+          },
+          "map": "Lotus",
+          "agent": "Yoru",
+          "tournament": "Middle East Finals",
+          "region": "Middle East"
+        }
+      ]
+    },
+    "8": {
+      "handle": "StarBurst",
+      "status": "inactive",
+      "first_name": "Isabella",
+      "last_name": "Hernandez",
+      "home_team_name": "Sky Legends",
+      "home_league_name": "Valorant Latin America Championship",
+      "region": "South America",
+      "game_statistics": [
+        {
+          "kills": {
+            "attack": 10,
+            "defense": 9
+          },
+          "deaths": {
+            "attack": 7,
+            "defense": 6
+          },
+          "assists": {
+            "attack": 5,
+            "defense": 3
+          },
+          "revives": {
+            "attack": 1,
+            "defense": 0
+          },
+          "rounds_won": {
+            "attack": 4,
+            "defense": 6
+          },
+          "map": "Ascent",
+          "agent": "Sage",
+          "tournament": "LATAM Invitational",
+          "region": "South America"
+        }
+      ]
+    },
+    "9": {
+      "handle": "CyberNova",
+      "status": "active",
+      "first_name": "James",
+      "last_name": "Anderson",
+      "home_team_name": "Galaxy Raiders",
+      "home_league_name": "Valorant Global Invitational",
+      "region": "North America",
+      "game_statistics": [
+        {
+          "kills": {
+            "attack": 14,
+            "defense": 10
+          },
+          "deaths": {
+            "attack": 7,
+            "defense": 6
+          },
+          "assists": {
+            "attack": 6,
+            "defense": 3
+          },
+          "revives": {
+            "attack": 0,
+            "defense": 1
+          },
+          "rounds_won": {
+            "attack": 7,
+            "defense": 6
+          },
+          "map": "Icebox",
+          "agent": "Killjoy",
+          "tournament": "Valorant Invitational",
+          "region": "North America"
+        }
+      ]
+    },
+    "10": {
+      "handle": "MysticSage",
+      "status": "active",
+      "first_name": "Mia",
+      "last_name": "Patel",
+      "home_team_name": "Celestial Titans",
+      "home_league_name": "Valorant India Pro Circuit",
+      "region": "Asia",
+      "game_statistics": [
+        {
+          "kills": {
+            "attack": 12,
+            "defense": 8
+          },
+          "deaths": {
+            "attack": 5,
+            "defense": 7
+          },
+          "assists": {
+            "attack": 4,
+            "defense": 2
+          },
+          "revives": {
+            "attack": 1,
+            "defense": 1
+          },
+          "rounds_won": {
+            "attack": 6,
+            "defense": 5
+          },
+          "map": "Bind",
+          "agent": "Raze",
+          "tournament": "India Invitational",
+          "region": "Asia"
+        }
+      ]
+    }
+}
