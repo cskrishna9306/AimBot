@@ -28,7 +28,7 @@ TOURS = {
 ESPORTS_DATA = ['leagues', 'tournaments', 'teams', 'players', 'mapping_data']
 
 # agent code mappings
-with open('agent_code_mapping.json', 'r') as file:
+with open('../Valorant Metadata/agent_code_mapping.json', 'r') as file:
     AGENT_CODE_MAPPINGS = json.load(file)
 
 # Function definition to return the unzipped data
@@ -144,24 +144,29 @@ def tour_data_etl(tour):
                             'region': TOURNAMENTS[game['tournamentId']]['region'],
                             # NOTE: We may or may not need the teams field since we can map each player to their respective teams with the PLAYERS dict
                             'teams': {
-                                int(localTeamID): teamID for localTeamID, teamID in game['teamMapping'].items() if teamID in TEAMS
+                                int(localTeamID): teamID for localTeamID, teamID in game['teamMapping'].items()
                             },
                             'players': {
-                                int(localPlayerID): playerID for localPlayerID, playerID in game['participantMapping'].items() if playerID in PLAYERS
+                                int(localPlayerID): playerID for localPlayerID, playerID in game['participantMapping'].items()
                             }
                         }
             
+        for pID, pInfo in PLAYERS.items():
+            # iterate through key-value pairs in pInfo
+            for key, value in pInfo.items():
+                PLAYERS[pID][key] = value.isoformat() if isinstance(value, datetime) else value
+        
         # LOADING PHASE: Optionally LOAD players metadata into the destination S3 bucket
         if load:
-            PLAYERS_W_DATES = {}
-            for pID, pInfo in PLAYERS.items():
-                PLAYERS_W_DATES[pID] = {}
-                # iterate through key-value pairs in pInfo
-                for key, value in pInfo.items():
-                    PLAYERS_W_DATES[pID][key] = value.isoformat() if isinstance(value, datetime) else value
+            # PLAYERS_W_DATES = {}
+            # for pID, pInfo in PLAYERS.items():
+            #     PLAYERS_W_DATES[pID] = {}
+            #     # iterate through key-value pairs in pInfo
+            #     for key, value in pInfo.items():
+            #         PLAYERS_W_DATES[pID][key] = value.isoformat() if isinstance(value, datetime) else value
             
             # Upload the PLAYERS dictionary to our destination S3 bucket
-            s3_client.put_object(Bucket=DESTINATION_S3_BUCKET, Key=f'{tour}/player_metadata.json', Body=json.dumps(PLAYERS_W_DATES))
+            s3_client.put_object(Bucket=DESTINATION_S3_BUCKET, Key=f'{tour}/player_metadata.json', Body=json.dumps(PLAYERS))
             print(f"Uploaded {tour}' players' metadata information to s3://{DESTINATION_S3_BUCKET}/{tour}/player_metadata.json")
         
         return
@@ -185,6 +190,7 @@ def tour_data_etl(tour):
                     # Assuming players 6 - 10 are always assigned the lower team number and start as attacker (vice versa for players 1 - 5)
                     # NOTE: DISCARD THE USE OF GAME METADATA HERE
                     
+                    # THE PROBLEM IS THAT WHEN ADDING THE TEAMS
                     team_player_mappings = {
                         min(game_metadata['teams'].keys()): {6, 7, 8, 9, 10},
                         max(game_metadata['teams'].keys()): {1, 2, 3, 4, 5}
@@ -219,7 +225,7 @@ def tour_data_etl(tour):
                             'agent': None,
                             'tournament': game_metadata['tournament'],
                             'region': game_metadata['region'],
-                        } for localPlayerID in game_metadata['players']
+                        } for localPlayerID in range(1, 11)
                     }
 
                     config_handled = False
