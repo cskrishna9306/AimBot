@@ -158,13 +158,6 @@ def tour_data_etl(tour):
         
         # LOADING PHASE: Optionally LOAD players metadata into the destination S3 bucket
         if load:
-            # PLAYERS_W_DATES = {}
-            # for pID, pInfo in PLAYERS.items():
-            #     PLAYERS_W_DATES[pID] = {}
-            #     # iterate through key-value pairs in pInfo
-            #     for key, value in pInfo.items():
-            #         PLAYERS_W_DATES[pID][key] = value.isoformat() if isinstance(value, datetime) else value
-            
             # Upload the PLAYERS dictionary to our destination S3 bucket
             s3_client.put_object(Bucket=DESTINATION_S3_BUCKET, Key=f'{tour}/player_metadata.json', Body=json.dumps(PLAYERS))
             print(f"Uploaded {tour}' players' metadata information to s3://{DESTINATION_S3_BUCKET}/{tour}/player_metadata.json")
@@ -213,16 +206,18 @@ def tour_data_etl(tour):
                                 'attack': 0,
                                 'defense': 0
                             },
-                            'revives': {
-                                'attack': 0,
-                                'defense': 0
-                            },
                             'rounds_won': {
                                 'attack': 0,
                                 'defense': 0
                             },
+                            # TODO: maybe add revives as a performance metric (something like avg. revive rate per round)
+                            # TODO: add stats for total damage dealt this game
+                            # TODO: add stats for down to death ratio
+                            # TODO: add stats for first blood percentages in each round
+                            'combat_score': 0,
                             'map': None,
                             'agent': None,
+                            'role': None,
                             'tournament': game_metadata['tournament'],
                             'region': game_metadata['region'],
                         } for localPlayerID in range(1, 11)
@@ -232,6 +227,7 @@ def tour_data_etl(tour):
                     # run game analytics for this game adhering with the local player and team IDs
                     for event in gameJSON:
                         if 'configuration' in event and not config_handled:
+                            # Ensure that the 'configuration' event is only handled once
                             config_handled = True
                             
                             for localPlayerID, value in game_summary.items():
@@ -241,7 +237,10 @@ def tour_data_etl(tour):
                             # assign agent information per player to their respective summaries
                             for player in event['configuration']['players']:
                                 if player['selectedAgent']['fallback']['guid'] in AGENT_CODE_MAPPINGS:
-                                    game_summary[player['playerId']['value']]['agent'] = AGENT_CODE_MAPPINGS[player['selectedAgent']['fallback']['guid']]
+                                    # Associating player with agent name
+                                    game_summary[player['playerId']['value']]['agent'] = AGENT_CODE_MAPPINGS[player['selectedAgent']['fallback']['guid']]['name']
+                                    # Associating player with agent role
+                                    game_summary[player['playerId']['value']]['role'] = AGENT_CODE_MAPPINGS[player['selectedAgent']['fallback']['guid']]['role']
                         elif 'roundStarted' in event:
                             # if attacking team is min team number we are talking about 6 - 10
                             # else attacking team is max team number we are talking about players 1 - 5
@@ -256,10 +255,24 @@ def tour_data_etl(tour):
                         elif 'roundDecided' in event:
                             for player in team_player_mappings[event['roundDecided']['result']['winningTeam']['value']]:
                                 game_summary[player]['rounds_won']['attack' if player in team_player_mappings[attacking_team] else 'defense'] += 1
+                        elif 'snapshot' in event:
+                            for player in event['snapshot']['players']:
+                                game_summary[player['playerId']['value']]['combat_score'] = player['scores']['combatScore']['totalScore']
                     
                     # Joining each player's statistics from this game to their respective entries in PLAYERS
                     for localPlayerID, playerID in game_metadata['players'].items():
                         if playerID in PLAYERS:
+                            # Calculate player KDA for this game
+                            # attack kills + attack assists / attack deaths
+                            game_summary[localPlayerID]['attack_kda'] = round((game_summary[localPlayerID]['kills']['attack'] + game_summary[localPlayerID]['assists']['attack']) / max(1, game_summary[localPlayerID]['deaths']['attack']), 2)
+                            # defense kills + defense assists / defense deaths
+                            game_summary[localPlayerID]['defense_kda'] = round((game_summary[localPlayerID]['kills']['defense'] + game_summary[localPlayerID]['assists']['defense']) / max(1, game_summary[localPlayerID]['deaths']['defense']), 2)
+                            
+                            # delete the kills/deaths/assists stats
+                            del game_summary[localPlayerID]['kills']
+                            del game_summary[localPlayerID]['deaths']
+                            del game_summary[localPlayerID]['assists']
+
                             PLAYERS[playerID]['game_statistics'].append(game_summary[localPlayerID])
                     
                     print(f'Succesfully retreived player stats from {tour}/games/{year}/{game}.json.gz')
@@ -274,9 +287,13 @@ def tour_data_etl(tour):
                 break
 
         # LOADING PHASE
+        PLAYERS_LIST = []
+        for _, player in PLAYERS.items():
+            PLAYERS_LIST.append(player)
+        
         # Upload the PLAYERS dictionary to our destination S3 bucket
-        s3_client.put_object(Bucket=DESTINATION_S3_BUCKET, Key=f'{tour}/player_statistics.json', Body=json.dumps(PLAYERS))
-        print(f"Uploaded {tour}' players' metadata information to s3://{DESTINATION_S3_BUCKET}/{tour}/player_statistics.json")
+        s3_client.put_object(Bucket=DESTINATION_S3_BUCKET, Key=f'{tour}/player_statistics.json', Body=json.dumps(PLAYERS_LIST))
+        print(f"Uploaded {tour}' players' statistics information to s3://{DESTINATION_S3_BUCKET}/{tour}/player_statistics.json")
 
         return
     
