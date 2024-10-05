@@ -1,93 +1,93 @@
 {
-    "41fb69c1-4189-7b37-f117-bcaf1e96f1bf": {
+    "41FB69C1-4189-7B37-F117-BCAF1E96F1BF": {
         "name": "Astra",
         "role": "Controller"
     },
-    "5f8d3a7f-467b-97f3-062c-13acf203c006": {
+    "5F8D3A7F-467B-97F3-062C-13ACF203C006": {
         "name": "Breach",
         "role": "Initiator"
     },
-    "9f0d8ba9-4140-b941-57d3-a7ad57c6b417": {
+    "9F0D8BA9-4140-B941-57D3-A7AD57C6B417": {
         "name": "Brimstone",
         "role": "Controller"
     },
-    "22697a3d-45bf-8dd7-4fec-84a9e28c69d7": {
+    "22697A3D-45BF-8DD7-4FEC-84A9E28C69D7": {
         "name": "Chamber",
         "role": "Sentinel"
     },
-    "117ed9e3-49f3-6512-3ccf-0cada7e3823b": {
+    "117ED9E3-49F3-6512-3CCF-0CADA7E3823B": {
         "name": "Cypher",
         "role": "Sentinel"
     },
-    "cc8b64c8-4b25-4ff9-6e7f-37b4da43d235": {
+    "CC8B64C8-4B25-4FF9-6E7F-37B4DA43D235": {
         "name": "Deadlock",
         "role": "Sentinel"
     },
-    "dade69b4-4f5a-8528-247b-219e5a1facd6": {
+    "DADE69B4-4F5A-8528-247B-219E5A1FACD6": {
         "name": "Fade",
         "role": "Initiator"
     },
-    "e370fa57-4757-3604-3648-499e1f642d3f": {
+    "E370FA57-4757-3604-3648-499E1F642D3F": {
         "name": "Gekko",
         "role": "Initiator"
     },
-    "95b78ed7-4637-86d9-7e41-71ba8c293152": {
+    "95B78ED7-4637-86D9-7E41-71BA8C293152": {
         "name": "Harbor",
         "role": "Controller"
     },
-    "0e38b510-41a8-5780-5e8f-568b2a4f2d6c": {
+    "0E38B510-41A8-5780-5E8F-568B2A4F2D6C": {
         "name": "ISO",
         "role": "Duelist"
     },
-    "add6443a-41bd-e414-f6ad-e58d267f4e95": {
+    "ADD6443A-41BD-E414-F6AD-E58D267F4E95": {
         "name": "Jett",
         "role": "Duelist"
     },
-    "1e58de9c-4950-5125-93e9-a0aee9f98746": {
+    "1E58DE9C-4950-5125-93E9-A0AEE9F98746": {
         "name": "Killjoy",
         "role": "Sentinel"
     },
-    "bb2a4828-46eb-8cd1-e765-15848195d751": {
+    "BB2A4828-46EB-8CD1-E765-15848195D751": {
         "name": "Neon",
         "role": "Duelist"
     },
-    "8e253930-4c05-31dd-1b6c-968525494517": {
+    "8E253930-4C05-31DD-1B6C-968525494517": {
         "name": "Omen",
         "role": "Controller"
     },
-    "eb93336a-449b-9c1b-0a54-a891f7921d69": {
+    "EB93336A-449B-9C1B-0A54-A891F7921D69": {
         "name": "Phoenix",
         "role": "Duelist"
     },
-    "f94c3b30-42be-e959-889c-5aa313dba261": {
+    "F94C3B30-42BE-E959-889C-5AA313DBA261": {
         "name": "Raze",
         "role": "Duelist"
     },
-    "a3bfb853-43b2-7238-a4f1-ad90e9e46bcc": {
+    "A3BFB853-43B2-7238-A4F1-AD90E9E46BCC": {
         "name": "Reyna",
         "role": "Duelist"
     },
-    "569fdd95-4d10-43ab-ca70-79becc718b46": {
+    "569FDD95-4D10-43AB-CA70-79BECC718B46": {
         "name": "Sage",
         "role": "Sentinel"
     },
-    "6f2a04ca-43e0-be17-7f36-b3908627744d": {
+    "6F2A04CA-43E0-BE17-7F36-B3908627744D": {
         "name": "Skye",
         "role": "Initiator"
     },
-    "320b2a48-4d9b-a075-30f1-1f93a9b638fa": {
+    "320B2A48-4D9B-A075-30F1-1F93A9B638FA": {
         "name": "Sova",
         "role": "Initiator"
     },
-    "707eab51-4836-f488-046a-cda6bf494859": {
+    "707EAB51-4836-F488-046A-CDA6BF494859": {
         "name": "Viper",
         "role": "Controller"
     },
-    "7f94d92c-4234-0a36-9646-3a87eb8b5c89": {
+    "7F94D92C-4234-0A36-9646-3A87EB8B5C89": {
         "name": "Yoru",
         "role": "Duelist"
     },
-    "601dbbe7-43ce-be57-2a40-4abd24953621": {
+    "601DBBE7-43CE-BE57-2A40-4ABD24953621": {
         "name": "KAY/O",
         "role": "Initiator"
     }
