@@ -181,7 +181,6 @@ def tour_data_etl(tour):
                     
                     # TRANSFORMATION PHASE
                     # Assuming players 6 - 10 are always assigned the lower team number and start as attacker (vice versa for players 1 - 5)
-                    # NOTE: DISCARD THE USE OF GAME METADATA HERE
                     
                     # THE PROBLEM IS THAT WHEN ADDING THE TEAMS
                     team_player_mappings = {
@@ -189,11 +188,13 @@ def tour_data_etl(tour):
                         max(game_metadata['teams'].keys()): {1, 2, 3, 4, 5}
                     }
 
+                    # The team that attacks first (Red) is always the team with minimum value
                     attacking_team = min(game_metadata['teams'].keys())
 
                     # Hashmap containing the stats per player for this game
                     game_summary = {
                         localPlayerID: {
+                            # NOTE: Do we need attack/defense stats for kills, deaths, and assists?
                             'kills': {
                                 'attack': 0,
                                 'defense': 0
@@ -206,15 +207,25 @@ def tour_data_etl(tour):
                                 'attack': 0,
                                 'defense': 0
                             },
+                            # NOTE: Rounds won might be irrelevant
                             'rounds_won': {
                                 'attack': 0,
                                 'defense': 0
                             },
                             # TODO: maybe add revives as a performance metric (something like avg. revive rate per round)
                             # TODO: add stats for total damage dealt this game
+                            'avg_damage_per_round': 0,
+                            'total_damage_dealt': 0,
+                            'avg_kills_per_round': 0,
+                            'avg_assists_per_round': 0,
+                            'avg_combat_score_per_round': 0,
+                            'total_combat_score': 0,
                             # TODO: add stats for down to death ratio
                             # TODO: add stats for first blood percentages in each round
-                            'combat_score': 0,
+                            'first_bloods_per_round': 0,
+                            'total_first_bloods': 0,
+                            'first_deaths_per_round': 0,
+                            'total_first_deaths': 0,
                             'map': None,
                             'agent': None,
                             'role': None,
@@ -224,6 +235,8 @@ def tour_data_etl(tour):
                     }
 
                     config_handled = False
+                    first_blood = False
+                    total_rounds = 0
                     # run game analytics for this game adhering with the local player and team IDs
                     for event in gameJSON:
                         if 'configuration' in event and not config_handled:
@@ -245,9 +258,21 @@ def tour_data_etl(tour):
                             # if attacking team is min team number we are talking about 6 - 10
                             # else attacking team is max team number we are talking about players 1 - 5
                             attacking_team = event['roundStarted']['spikeMode']['attackingTeam']['value']
+                            first_blood = False
+                            total_rounds += 1
+                        elif 'damageEvent' in event:
+                            game_summary[event['damageEvent']['causerId']['value']]['total_damage_dealt'] += event['damageEvent']['damageAmount']
                         elif 'playerDied' in event:
                             deceasedId = event['playerDied']['deceasedId']['value']
                             killerId = event['playerDied']['killerId']['value']
+                            
+                            # check if this was first blood
+                            if not first_blood:
+                                first_blood = True
+                                game_summary[killerId]['total_first_bloods'] += 1
+                                game_summary[deceasedId]['total_first_deaths'] += 1
+                                pass
+                            
                             game_summary[deceasedId]['deaths']['attack' if deceasedId in team_player_mappings[attacking_team] else 'defense'] += 1
                             game_summary[killerId]['kills']['attack' if deceasedId in team_player_mappings[attacking_team] else 'defense'] += 1
                         elif 'playerRevived' in event:
@@ -257,23 +282,45 @@ def tour_data_etl(tour):
                                 game_summary[player]['rounds_won']['attack' if player in team_player_mappings[attacking_team] else 'defense'] += 1
                         elif 'snapshot' in event:
                             for player in event['snapshot']['players']:
-                                game_summary[player['playerId']['value']]['combat_score'] = player['scores']['combatScore']['totalScore']
+                                game_summary[player['playerId']['value']]['total_combat_score'] = player['scores']['combatScore']['totalScore']
                     
                     # Joining each player's statistics from this game to their respective entries in PLAYERS
                     for localPlayerID, playerID in game_metadata['players'].items():
                         if playerID in PLAYERS:
-                            # Calculate player KDA for this game
-                            # attack kills + attack assists / attack deaths
-                            game_summary[localPlayerID]['attack_kda'] = round((game_summary[localPlayerID]['kills']['attack'] + game_summary[localPlayerID]['assists']['attack']) / max(1, game_summary[localPlayerID]['deaths']['attack']), 2)
-                            # defense kills + defense assists / defense deaths
-                            game_summary[localPlayerID]['defense_kda'] = round((game_summary[localPlayerID]['kills']['defense'] + game_summary[localPlayerID]['assists']['defense']) / max(1, game_summary[localPlayerID]['deaths']['defense']), 2)
+                            current_player = game_summary[localPlayerID]
+
+                            # calculate attack KDA (attack kills + attack assists / attack deaths)
+                            current_player['attack_kda'] = round((current_player['kills']['attack'] + current_player['assists']['attack']) / max(1, current_player['deaths']['attack']), 2)
+                            # calculate defense KDA (defense kills + defense assists / defense deaths)
+                            current_player['defense_kda'] = round((current_player['kills']['defense'] + current_player['assists']['defense']) / max(1, current_player['deaths']['defense']), 2)
+                            
+                            # calculate average kills per round
+                            current_player['avg_kills_per_round'] = round((current_player['kills']['attack'] + current_player['kills']['defense']) / total_rounds, 2)
+                            # calculate average assists per round
+                            current_player['avg_assists_per_round'] = round((current_player['assists']['attack'] + current_player['assists']['defense']) / total_rounds, 2)
+                            # calculate average combat score per round
+                            current_player['avg_combat_score_per_round'] = round(current_player['total_combat_score'] / total_rounds, 2)
+                            # calculate average damage per round
+                            current_player['avg_damage_per_round'] = round(current_player['total_damage_dealt'] / total_rounds, 2)
+                            
+                            # calculate first bloods per round
+                            current_player['first_bloods_per_round'] = round(current_player['total_first_bloods'] / total_rounds, 2)
+                            # calculate first deaths per round
+                            current_player['first_deaths_per_round'] = round(current_player['total_first_deaths'] / total_rounds, 2)
                             
                             # delete the kills/deaths/assists stats
-                            del game_summary[localPlayerID]['kills']
-                            del game_summary[localPlayerID]['deaths']
-                            del game_summary[localPlayerID]['assists']
+                            del current_player['kills']
+                            del current_player['deaths']
+                            del current_player['assists']
 
-                            PLAYERS[playerID]['game_statistics'].append(game_summary[localPlayerID])
+                            # delete total damage dealt
+                            del current_player['total_damage_dealt']
+
+                            # delete total first bloods and deaths
+                            del current_player['total_first_bloods']
+                            del current_player['total_first_deaths']
+
+                            PLAYERS[playerID]['game_statistics'].append(current_player)
                     
                     print(f'Succesfully retreived player stats from {tour}/games/{year}/{game}.json.gz')
                     i += 1
