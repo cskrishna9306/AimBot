@@ -181,8 +181,6 @@ def tour_data_etl(tour):
                     
                     # TRANSFORMATION PHASE
                     # Assuming players 6 - 10 are always assigned the lower team number and start as attacker (vice versa for players 1 - 5)
-                    
-                    # THE PROBLEM IS THAT WHEN ADDING THE TEAMS
                     team_player_mappings = {
                         min(game_metadata['teams'].keys()): {6, 7, 8, 9, 10},
                         max(game_metadata['teams'].keys()): {1, 2, 3, 4, 5}
@@ -208,6 +206,8 @@ def tour_data_etl(tour):
                                 'defense': 0
                             },
                             # TODO: maybe add revives as a performance metric (something like avg. revive rate per round)
+                            'avg_revives_per_round': 0,
+                            'total_revives': 0,
                             # TODO: add stats for total damage dealt this game
                             'avg_damage_per_round': 0,
                             'total_damage_dealt': 0,
@@ -272,7 +272,7 @@ def tour_data_etl(tour):
                             game_summary[deceasedId]['deaths']['attack' if deceasedId in team_player_mappings[attacking_team] else 'defense'] += 1
                             game_summary[killerId]['kills']['attack' if deceasedId in team_player_mappings[attacking_team] else 'defense'] += 1
                         elif 'playerRevived' in event:
-                            pass
+                            game_summary[event['playerRevived']['revivedById']['value']]['total_revives'] += 1
                         elif 'snapshot' in event:
                             for player in event['snapshot']['players']:
                                 game_summary[player['playerId']['value']]['total_combat_score'] = player['scores']['combatScore']['totalScore']
@@ -295,7 +295,9 @@ def tour_data_etl(tour):
                             current_player['avg_combat_score_per_round'] = round(current_player['total_combat_score'] / total_rounds, 2)
                             # calculate average damage per round
                             current_player['avg_damage_per_round'] = round(current_player['total_damage_dealt'] / total_rounds, 2)
-                            
+                            # calculate average revives per round
+                            current_player['avg_revives_per_round'] = round(current_player['total_revives'] / total_rounds, 2)
+
                             # calculate first bloods per round
                             current_player['first_bloods_per_round'] = round(current_player['total_first_bloods'] / total_rounds, 2)
                             # calculate first deaths per round
@@ -306,8 +308,12 @@ def tour_data_etl(tour):
                             del current_player['deaths']
                             del current_player['assists']
 
+                            # delete the total combat score
+                            del current_player['total_combat_score']
                             # delete total damage dealt
                             del current_player['total_damage_dealt']
+                            # delete total revives
+                            del current_player['total_revives']
 
                             # delete total first bloods and deaths
                             del current_player['total_first_bloods']
