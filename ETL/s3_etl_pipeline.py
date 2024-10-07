@@ -207,11 +207,6 @@ def tour_data_etl(tour):
                                 'attack': 0,
                                 'defense': 0
                             },
-                            # NOTE: Rounds won might be irrelevant
-                            'rounds_won': {
-                                'attack': 0,
-                                'defense': 0
-                            },
                             # TODO: maybe add revives as a performance metric (something like avg. revive rate per round)
                             # TODO: add stats for total damage dealt this game
                             'avg_damage_per_round': 0,
@@ -261,7 +256,8 @@ def tour_data_etl(tour):
                             first_blood = False
                             total_rounds += 1
                         elif 'damageEvent' in event:
-                            game_summary[event['damageEvent']['causerId']['value']]['total_damage_dealt'] += event['damageEvent']['damageAmount']
+                            if 'causerId' in event['damageEvent']:
+                                game_summary[event['damageEvent']['causerId']['value']]['total_damage_dealt'] += event['damageEvent']['damageAmount']
                         elif 'playerDied' in event:
                             deceasedId = event['playerDied']['deceasedId']['value']
                             killerId = event['playerDied']['killerId']['value']
@@ -277,9 +273,6 @@ def tour_data_etl(tour):
                             game_summary[killerId]['kills']['attack' if deceasedId in team_player_mappings[attacking_team] else 'defense'] += 1
                         elif 'playerRevived' in event:
                             pass
-                        elif 'roundDecided' in event:
-                            for player in team_player_mappings[event['roundDecided']['result']['winningTeam']['value']]:
-                                game_summary[player]['rounds_won']['attack' if player in team_player_mappings[attacking_team] else 'defense'] += 1
                         elif 'snapshot' in event:
                             for player in event['snapshot']['players']:
                                 game_summary[player['playerId']['value']]['total_combat_score'] = player['scores']['combatScore']['totalScore']
