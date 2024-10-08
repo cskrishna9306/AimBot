@@ -6,9 +6,20 @@ import botocore
 from botocore.errorfactory import ClientError
 from botocore.exceptions import NoCredentialsError, PartialCredentialsError
 from datetime import datetime
+from botocore.config import Config
+
+# Create a custom config with increased timeout settings
+s3_config = Config(
+    retries={
+        'max_attempts': 10,  # Increase retries in case of failures
+        'mode': 'standard'
+    },
+    connect_timeout=300,  # Adjust as needed
+    read_timeout=300      # Adjust as needed
+)
 
 # Initializing the S3 client
-s3_client = boto3.client('s3')
+s3_client = boto3.client('s3', config=s3_config)
 # Create a paginator for listing objects
 paginator = s3_client.get_paginator('list_objects_v2')
 
@@ -322,15 +333,15 @@ def tour_data_etl(tour):
                             PLAYERS[playerID]['game_statistics'].append(current_player)
                     
                     print(f'Succesfully retreived player stats from {tour}/games/{year}/{game}.json.gz')
-                    i += 1
+                    # i += 1
                     # need to only find the first hit
                     break
                 except botocore.exceptions.ClientError as e:
                     if year == 2024:
                         print(f'Error: File for {game} not found')
             
-            if i == 100:
-                break
+            # if i == 100:
+            #     break
 
         # LOADING PHASE
         PLAYERS_LIST = []
@@ -355,4 +366,5 @@ if __name__ == "__main__":
 
     # extract, unzip, and transform each tour data
     for tour in TOURS:
-        tour_data_etl(tour)
+        if tour != 'game-changers':
+            tour_data_etl(tour)
