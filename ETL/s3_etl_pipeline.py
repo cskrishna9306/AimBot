@@ -333,15 +333,12 @@ def tour_data_etl(tour):
                             PLAYERS[playerID]['game_statistics'].append(current_player)
                     
                     print(f'Succesfully retreived player stats from {tour}/games/{year}/{game}.json.gz')
-                    # i += 1
+                    
                     # need to only find the first hit
                     break
                 except botocore.exceptions.ClientError as e:
                     if year == 2024:
                         print(f'Error: File for {game} not found')
-            
-            # if i == 100:
-            #     break
 
         # LOADING PHASE
         PLAYERS_LIST = []
@@ -366,5 +363,4 @@ if __name__ == "__main__":
 
     # extract, unzip, and transform each tour data
     for tour in TOURS:
-        if tour != 'game-changers':
-            tour_data_etl(tour)
+        tour_data_etl(tour)
