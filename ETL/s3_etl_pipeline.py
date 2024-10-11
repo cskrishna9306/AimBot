@@ -257,10 +257,6 @@ def tour_data_etl(tour):
                             'total_first_deaths': 0,
                             'agent': None,
                             'role': None,
-                            # NOTE: When calculating just the average, we wouldn't need information on the game's map, tournament, or region
-                            # 'map': None,
-                            # 'tournament': game_metadata['tournament'],
-                            # 'region': game_metadata['region'],
                         } for localPlayerID in range(1, 11)
                     }
 
@@ -272,10 +268,6 @@ def tour_data_etl(tour):
                         if 'configuration' in event and not config_handled:
                             # Ensure that the 'configuration' event is only handled once
                             config_handled = True
-                            
-                            # for localPlayerID, value in game_summary.items():
-                                # assign map information for this game
-                                # value['map'] = event['configuration']['selectedMap']['fallback']['displayName']
                                 
                             # assign agent information per player to their respective summaries
                             for player in event['configuration']['players']:
@@ -305,7 +297,12 @@ def tour_data_etl(tour):
                                 pass
                             
                             game_summary[deceasedId][f"total_{'attack' if deceasedId in team_player_mappings[attacking_team] else 'defense'}_deaths"] += 1
-                            game_summary[killerId][f"total_{'attack' if deceasedId in team_player_mappings[attacking_team] else 'defense'}_kills"] += 1
+                            game_summary[killerId][f"total_{'attack' if killerId in team_player_mappings[attacking_team] else 'defense'}_kills"] += 1
+
+                            # calculate assists
+                            for assistant in event['playerDied']['assistants']:
+                                game_summary[assistant['assistantId']['value']][f"total_{'attack' if killerId in team_player_mappings[attacking_team] else 'defense'}_assists"] += 1
+                        
                         elif 'playerRevived' in event:
                             game_summary[event['playerRevived']['revivedById']['value']]['total_revives'] += 1
                         elif 'snapshot' in event:
