@@ -61,6 +61,33 @@ def extract_zipped_data(bucket, key):
         print(f"Error: {e}")
     return
 
+# Function definition to calculate average statistics for this player/agent
+# Average statistics include attack/defense KDA, average kills/assists/combat score/revives/damage/first bloods/first deaths per round
+def calculate_avg_statistics(player):
+    # calculate attack KDA (attack kills + attack assists / attack deaths)
+    player['attack_kda'] = round((player['total_attack_kills'] + player['total_attack_assists']) / max(1, player['total_attack_deaths']), 2)
+    # calculate defense KDA (defense kills + defense assists / defense deaths)
+    player['defense_kda'] = round((player['total_defense_kills'] + player['total_defense_assists']) / max(1, player['total_defense_deaths']), 2)
+
+    # calculate average kills per round
+    player['avg_kills_per_round'] = round((player['total_attack_kills'] + player['total_defense_kills']) / player['total_rounds'], 2)
+    player['avg_assists_per_round'] = round((player['total_attack_assists'] + player['total_defense_assists']) / player['total_rounds'], 2)
+            
+    # delete the total kills, assists, and deaths
+    for i in ['kills', 'assists', 'deaths']:
+        del player[f'total_attack_{i}']
+        del player[f'total_defense_{i}']
+            
+    # List of statistics other than the attack/defense KDA, average kills and assists
+    stats = ['combat_score', 'revives', 'damage', 'first_bloods', 'first_deaths']
+    for stat in stats:
+        # Calculating and adding the average statistic to this player's summary
+        player[f'avg_{stat}_per_round'] = round(player[f'total_{stat}'] / player['total_rounds'], 2)
+        # Deleting the total statistic from this player's summary
+        del player[f'total_{stat}']
+    
+    return player
+
 # Function definition to extract zipped fandom data from the source S3 bucket, 
 # and load the unzipped data into our destination S3 bucket
 def fandom_data_etl():
@@ -145,7 +172,20 @@ def tour_data_etl(tour):
                                     'home_team_acronym': TEAMS[player['home_team_id']]['acronym'] if player['home_team_id'] in TEAMS else None,
                                     'home_league_name': TEAMS[player['home_team_id']]['home_league_name'] if player['home_team_id'] in TEAMS else None,
                                     'region': TEAMS[player['home_team_id']]['region'] if player['home_team_id'] in TEAMS else None,
-                                    'game_statistics': []
+                                    'total_rounds_played': 0,
+                                    'total_attack_kills': 0,
+                                    'total_defense_kills': 0,
+                                    'total_attack_assists': 0,
+                                    'total_defense_assists': 0,
+                                    'total_attack_deaths': 0,
+                                    'total_defense_deaths': 0,
+                                    'total_revives': 0,
+                                    'total_damage_dealt': 0,
+                                    'total_combat_score': 0,
+                                    'total_first_bloods': 0,
+                                    'total_first_deaths': 0,
+                                    # categorize game statistics per agent/role
+                                    'player_statistics_per_agent': {}
                                 }
                 case 'mapping_data':
             # elif file == 'mapping_data':
@@ -204,39 +244,23 @@ def tour_data_etl(tour):
                     game_summary = {
                         localPlayerID: {
                             # NOTE: Do we need attack/defense stats for kills, deaths, and assists?
-                            'kills': {
-                                'attack': 0,
-                                'defense': 0
-                            },
-                            'deaths': {
-                                'attack': 0,
-                                'defense': 0
-                            },
-                            'assists': {
-                                'attack': 0,
-                                'defense': 0
-                            },
-                            # TODO: maybe add revives as a performance metric (something like avg. revive rate per round)
-                            'avg_revives_per_round': 0,
+                            'total_attack_kills': 0,
+                            'total_defense_kills': 0,
+                            'total_attack_assists': 0,
+                            'total_defense_assists': 0,
+                            'total_attack_deaths': 0,
+                            'total_defense_deaths': 0,
                             'total_revives': 0,
-                            # TODO: add stats for total damage dealt this game
-                            'avg_damage_per_round': 0,
                             'total_damage_dealt': 0,
-                            'avg_kills_per_round': 0,
-                            'avg_assists_per_round': 0,
-                            'avg_combat_score_per_round': 0,
                             'total_combat_score': 0,
-                            # TODO: add stats for down to death ratio
-                            # TODO: add stats for first blood percentages in each round
-                            'first_bloods_per_round': 0,
                             'total_first_bloods': 0,
-                            'first_deaths_per_round': 0,
                             'total_first_deaths': 0,
-                            'map': None,
                             'agent': None,
                             'role': None,
-                            'tournament': game_metadata['tournament'],
-                            'region': game_metadata['region'],
+                            # NOTE: When calculating just the average, we wouldn't need information on the game's map, tournament, or region
+                            # 'map': None,
+                            # 'tournament': game_metadata['tournament'],
+                            # 'region': game_metadata['region'],
                         } for localPlayerID in range(1, 11)
                     }
 
@@ -249,9 +273,9 @@ def tour_data_etl(tour):
                             # Ensure that the 'configuration' event is only handled once
                             config_handled = True
                             
-                            for localPlayerID, value in game_summary.items():
+                            # for localPlayerID, value in game_summary.items():
                                 # assign map information for this game
-                                value['map'] = event['configuration']['selectedMap']['fallback']['displayName']
+                                # value['map'] = event['configuration']['selectedMap']['fallback']['displayName']
                                 
                             # assign agent information per player to their respective summaries
                             for player in event['configuration']['players']:
@@ -280,8 +304,8 @@ def tour_data_etl(tour):
                                 game_summary[deceasedId]['total_first_deaths'] += 1
                                 pass
                             
-                            game_summary[deceasedId]['deaths']['attack' if deceasedId in team_player_mappings[attacking_team] else 'defense'] += 1
-                            game_summary[killerId]['kills']['attack' if deceasedId in team_player_mappings[attacking_team] else 'defense'] += 1
+                            game_summary[deceasedId][f"total_{'attack' if deceasedId in team_player_mappings[attacking_team] else 'defense'}_deaths"] += 1
+                            game_summary[killerId][f"total_{'attack' if deceasedId in team_player_mappings[attacking_team] else 'defense'}_kills"] += 1
                         elif 'playerRevived' in event:
                             game_summary[event['playerRevived']['revivedById']['value']]['total_revives'] += 1
                         elif 'snapshot' in event:
@@ -292,46 +316,26 @@ def tour_data_etl(tour):
                     for localPlayerID, playerID in game_metadata['players'].items():
                         if playerID in PLAYERS:
                             current_player = game_summary[localPlayerID]
-
-                            # calculate attack KDA (attack kills + attack assists / attack deaths)
-                            current_player['attack_kda'] = round((current_player['kills']['attack'] + current_player['assists']['attack']) / max(1, current_player['deaths']['attack']), 2)
-                            # calculate defense KDA (defense kills + defense assists / defense deaths)
-                            current_player['defense_kda'] = round((current_player['kills']['defense'] + current_player['assists']['defense']) / max(1, current_player['deaths']['defense']), 2)
+                            current_player['total_rounds_played'] = total_rounds
                             
-                            # calculate average kills per round
-                            current_player['avg_kills_per_round'] = round((current_player['kills']['attack'] + current_player['kills']['defense']) / total_rounds, 2)
-                            # calculate average assists per round
-                            current_player['avg_assists_per_round'] = round((current_player['assists']['attack'] + current_player['assists']['defense']) / total_rounds, 2)
-                            # calculate average combat score per round
-                            current_player['avg_combat_score_per_round'] = round(current_player['total_combat_score'] / total_rounds, 2)
-                            # calculate average damage per round
-                            current_player['avg_damage_per_round'] = round(current_player['total_damage_dealt'] / total_rounds, 2)
-                            # calculate average revives per round
-                            current_player['avg_revives_per_round'] = round(current_player['total_revives'] / total_rounds, 2)
+                            # NOTE: We could do a running agent/player statistic every time we append a game to the player statistic
+                            # NOTE: However, calculating a running agent average would run redundant computation per game vs calculating the average at the very end
+ 
+                            stats = ['total_rounds_played', 'total_attack_kills', 'total_defense_kills', 'total_attack_assists', 'total_defense_assists', 'total_attack_deaths', 'total_defense_deaths', 'total_revives', 'total_damage_dealt', 'total_combat_score', 'total_first_bloods', 'total_first_deaths']
 
-                            # calculate first bloods per round
-                            current_player['first_bloods_per_round'] = round(current_player['total_first_bloods'] / total_rounds, 2)
-                            # calculate first deaths per round
-                            current_player['first_deaths_per_round'] = round(current_player['total_first_deaths'] / total_rounds, 2)
+                            if current_player['role'] not in PLAYERS[playerID]['player_statistics_per_agent']:
+                                PLAYERS[playerID]['player_statistics_per_agent'][current_player['role']] = {}
                             
-                            # delete the kills/deaths/assists stats
-                            del current_player['kills']
-                            del current_player['deaths']
-                            del current_player['assists']
+                            if current_player['agent'] not in PLAYERS[playerID]['player_statistics_per_agent'][current_player['role']]:
+                                PLAYERS[playerID]['player_statistics_per_agent'][current_player['role']][current_player['agent']] = {
+                                    stat: 0 for stat in stats
+                                    }
 
-                            # delete the total combat score
-                            del current_player['total_combat_score']
-                            # delete total damage dealt
-                            del current_player['total_damage_dealt']
-                            # delete total revives
-                            del current_player['total_revives']
-
-                            # delete total first bloods and deaths
-                            del current_player['total_first_bloods']
-                            del current_player['total_first_deaths']
-
-                            PLAYERS[playerID]['game_statistics'].append(current_player)
+                            for stat in stats:
+                                PLAYERS[playerID][stat] += current_player[stat]
+                                PLAYERS[playerID]['player_statistics_per_agent'][current_player['role']][current_player['agent']][stat] += current_player[stat]
                     
+                    # DEBUG statement
                     print(f'Succesfully retreived player stats from {tour}/games/{year}/{game}.json.gz')
                     
                     # need to only find the first hit
@@ -340,11 +344,20 @@ def tour_data_etl(tour):
                     if year == 2024:
                         print(f'Error: File for {game} not found')
 
-        # LOADING PHASE
+        # Calculating all average statistics per player and per agent per player
         PLAYERS_LIST = []
         for _, player in PLAYERS.items():
+            # NOTE: Or we could keep track of total player kills, assists, KDA, ... and calculate the average before appending it to the final list
+            calculate_avg_statistics(player)
+
+            # Calculate per agent statistic for this player
+            for _, role in player['player_statistics_per_agent'].items():
+                for _, agent in role.items():
+                   calculate_avg_statistics(agent)
+
             PLAYERS_LIST.append(player)
         
+        # LOADING PHASE
         # Upload the PLAYERS dictionary to our destination S3 bucket
         s3_client.put_object(Bucket=DESTINATION_S3_BUCKET, Key=f'{tour}/player_statistics.json', Body=json.dumps(PLAYERS_LIST))
         print(f"Uploaded {tour}' players' statistics information to s3://{DESTINATION_S3_BUCKET}/{tour}/player_statistics.json")
