@@ -70,8 +70,8 @@ def calculate_avg_statistics(player):
     player['defense_kda'] = round((player['total_defense_kills'] + player['total_defense_assists']) / max(1, player['total_defense_deaths']), 2)
 
     # calculate average kills per round
-    player['avg_kills_per_round'] = round((player['total_attack_kills'] + player['total_defense_kills']) / player['total_rounds'], 2)
-    player['avg_assists_per_round'] = round((player['total_attack_assists'] + player['total_defense_assists']) / player['total_rounds'], 2)
+    player['avg_kills_per_round'] = round((player['total_attack_kills'] + player['total_defense_kills']) / max(1, player['total_rounds_played']), 2)
+    player['avg_assists_per_round'] = round((player['total_attack_assists'] + player['total_defense_assists']) / max(1, player['total_rounds_played']), 2)
             
     # delete the total kills, assists, and deaths
     for i in ['kills', 'assists', 'deaths']:
@@ -79,10 +79,10 @@ def calculate_avg_statistics(player):
         del player[f'total_defense_{i}']
             
     # List of statistics other than the attack/defense KDA, average kills and assists
-    stats = ['combat_score', 'revives', 'damage', 'first_bloods', 'first_deaths']
+    stats = ['combat_score', 'revives', 'damage_dealt', 'first_bloods', 'first_deaths']
     for stat in stats:
         # Calculating and adding the average statistic to this player's summary
-        player[f'avg_{stat}_per_round'] = round(player[f'total_{stat}'] / player['total_rounds'], 2)
+        player[f'avg_{stat}_per_round'] = round(player[f'total_{stat}'] / max(1, player['total_rounds_played']), 2)
         # Deleting the total statistic from this player's summary
         del player[f'total_{stat}']
     
@@ -337,12 +337,16 @@ def tour_data_etl(tour):
                     
                     # DEBUG statement
                     print(f'Succesfully retreived player stats from {tour}/games/{year}/{game}.json.gz')
+                    i += 1
                     
                     # need to only find the first hit
                     break
                 except botocore.exceptions.ClientError as e:
                     if year == 2024:
                         print(f'Error: File for {game} not found')
+
+            if i == 10:
+                break
 
         # Calculating all average statistics per player and per agent per player
         PLAYERS_LIST = []
@@ -354,7 +358,8 @@ def tour_data_etl(tour):
             for _, role in player['player_statistics_per_agent'].items():
                 for _, agent in role.items():
                    calculate_avg_statistics(agent)
-
+            
+            print(player)
             PLAYERS_LIST.append(player)
         
         # LOADING PHASE
