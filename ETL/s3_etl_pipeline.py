@@ -92,7 +92,6 @@ def calculate_avg_statistics(player):
 # and load the unzipped data into our destination S3 bucket
 def fandom_data_etl():
     # Traverse the fandom file path in the source S3 bucket
-    # Use the paginator to iterate over all objects within the fandom prefix
     for page in paginator.paginate(Bucket=SOURCE_S3_BUCKET, Prefix='fandom/'):
         # Check if the page contains objects
         if 'Contents' in page:
@@ -129,14 +128,12 @@ def tour_data_etl(tour):
             # TRANSFORMATION PHASE
             match file:
                 case 'leagues':
-            # if file == 'leagues':
                     for league in JSON_FILE:
                         LEAGUES[league['league_id']] = {
                             'name': league['name'],
                             'region': league['region']
                         }
                 case 'tournaments':
-            # elif file == 'tournaments':
                     for tournament in JSON_FILE:
                         TOURNAMENTS[tournament['id']] = {
                             'name': tournament['name'],
@@ -145,7 +142,6 @@ def tour_data_etl(tour):
                             'region': LEAGUES[tournament['league_id']]['region']
                         }
                 case 'teams':
-            # elif file == 'teams':
                     for team in JSON_FILE:
                         TEAMS[team['id']] = {
                             'name': team['name'],
@@ -154,7 +150,6 @@ def tour_data_etl(tour):
                             'region': LEAGUES[team['home_league_id']]['region']
                         }
                 case 'players':
-            # elif file == 'players':
                     # TODO: figure out logic to map the players to the right team for that year
                     # owing to increasing complexity of keeping track of the changing teams for each player, 
                     # we decided to only retain the most recent information of the player
@@ -172,23 +167,12 @@ def tour_data_etl(tour):
                                     'home_team_acronym': TEAMS[player['home_team_id']]['acronym'] if player['home_team_id'] in TEAMS else None,
                                     'home_league_name': TEAMS[player['home_team_id']]['home_league_name'] if player['home_team_id'] in TEAMS else None,
                                     'region': TEAMS[player['home_team_id']]['region'] if player['home_team_id'] in TEAMS else None,
-                                    'total_rounds_played': 0,
-                                    'total_attack_kills': 0,
-                                    'total_defense_kills': 0,
-                                    'total_attack_assists': 0,
-                                    'total_defense_assists': 0,
-                                    'total_attack_deaths': 0,
-                                    'total_defense_deaths': 0,
-                                    'total_revives': 0,
-                                    'total_damage_dealt': 0,
-                                    'total_combat_score': 0,
-                                    'total_first_bloods': 0,
-                                    'total_first_deaths': 0,
+                                    # player's overall performance across all games
+                                    'career_statistics': {},
                                     # categorize game statistics per agent/role
                                     'player_statistics_per_agent': {}
                                 }
                 case 'mapping_data':
-            # elif file == 'mapping_data':
                     for game in JSON_FILE:
                         GAMES[game['platformGameId']] = {
                             'tournament': TOURNAMENTS[game['tournamentId']]['name'],
@@ -315,21 +299,27 @@ def tour_data_etl(tour):
                             current_player = game_summary[localPlayerID]
                             current_player['total_rounds_played'] = total_rounds
                             
-                            # NOTE: We could do a running agent/player statistic every time we append a game to the player statistic
-                            # NOTE: However, calculating a running agent average would run redundant computation per game vs calculating the average at the very end
- 
+                            # list of all trackable metrics                            
                             stats = ['total_rounds_played', 'total_attack_kills', 'total_defense_kills', 'total_attack_assists', 'total_defense_assists', 'total_attack_deaths', 'total_defense_deaths', 'total_revives', 'total_damage_dealt', 'total_combat_score', 'total_first_bloods', 'total_first_deaths']
 
+                            # check to see if this the player's first game
+                            if not PLAYERS[playerID]['career_statistics']:
+                                PLAYERS[playerID]['career_statistics'] = {
+                                    stat: 0 for stat in stats
+                                }
+
+                            # check to see if this is the player's first time playing this role
                             if current_player['role'] not in PLAYERS[playerID]['player_statistics_per_agent']:
                                 PLAYERS[playerID]['player_statistics_per_agent'][current_player['role']] = {}
                             
+                            # check to see if this is the player's first time playing this agent
                             if current_player['agent'] not in PLAYERS[playerID]['player_statistics_per_agent'][current_player['role']]:
                                 PLAYERS[playerID]['player_statistics_per_agent'][current_player['role']][current_player['agent']] = {
                                     stat: 0 for stat in stats
-                                    }
+                                }
 
                             for stat in stats:
-                                PLAYERS[playerID][stat] += current_player[stat]
+                                PLAYERS[playerID]['career_statistics'][stat] += current_player[stat]
                                 PLAYERS[playerID]['player_statistics_per_agent'][current_player['role']][current_player['agent']][stat] += current_player[stat]
                     
                     # DEBUG statement
@@ -348,15 +338,16 @@ def tour_data_etl(tour):
         # Calculating all average statistics per player and per agent per player
         PLAYERS_LIST = []
         for _, player in PLAYERS.items():
-            # NOTE: Or we could keep track of total player kills, assists, KDA, ... and calculate the average before appending it to the final list
-            calculate_avg_statistics(player)
+            # Calculate overall player performance across all games
+            if player['career_statistics']:
+                calculate_avg_statistics(player['career_statistics'])
 
             # Calculate per agent statistic for this player
-            for _, role in player['player_statistics_per_agent'].items():
-                for _, agent in role.items():
-                   calculate_avg_statistics(agent)
+            if player['player_statistics_per_agent']:
+                for _, role in player['player_statistics_per_agent'].items():
+                    for _, agent in role.items():
+                        calculate_avg_statistics(agent)
             
-            print(player)
             PLAYERS_LIST.append(player)
         
         # LOADING PHASE
