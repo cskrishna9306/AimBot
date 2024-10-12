@@ -202,6 +202,9 @@ def tour_data_etl(tour):
     # Function definition to load and transform player specific data
     def game_data_etl():
         i = 0
+        # list of all trackable metrics                            
+        STATS = ['total_rounds_played', 'total_attack_kills', 'total_defense_kills', 'total_attack_assists', 'total_defense_assists', 'total_attack_deaths', 'total_defense_deaths', 'total_revives', 'total_damage_dealt', 'total_combat_score', 'total_first_bloods', 'total_first_deaths']
+        
         # parse though each game within GAMES
         for game, game_metadata in GAMES.items():
             # check for a hit for this game within {tour}/games/[2022, 2023, 2024]
@@ -298,14 +301,11 @@ def tour_data_etl(tour):
                         if playerID in PLAYERS:
                             current_player = game_summary[localPlayerID]
                             current_player['total_rounds_played'] = total_rounds
-                            
-                            # list of all trackable metrics                            
-                            stats = ['total_rounds_played', 'total_attack_kills', 'total_defense_kills', 'total_attack_assists', 'total_defense_assists', 'total_attack_deaths', 'total_defense_deaths', 'total_revives', 'total_damage_dealt', 'total_combat_score', 'total_first_bloods', 'total_first_deaths']
 
                             # check to see if this the player's first game
                             if not PLAYERS[playerID]['career_statistics']:
                                 PLAYERS[playerID]['career_statistics'] = {
-                                    stat: 0 for stat in stats
+                                    stat: 0 for stat in STATS
                                 }
 
                             # check to see if this is the player's first time playing this role
@@ -315,10 +315,10 @@ def tour_data_etl(tour):
                             # check to see if this is the player's first time playing this agent
                             if current_player['agent'] not in PLAYERS[playerID]['player_statistics_per_agent'][current_player['role']]:
                                 PLAYERS[playerID]['player_statistics_per_agent'][current_player['role']][current_player['agent']] = {
-                                    stat: 0 for stat in stats
+                                    stat: 0 for stat in STATS
                                 }
 
-                            for stat in stats:
+                            for stat in STATS:
                                 PLAYERS[playerID]['career_statistics'][stat] += current_player[stat]
                                 PLAYERS[playerID]['player_statistics_per_agent'][current_player['role']][current_player['agent']][stat] += current_player[stat]
                     
