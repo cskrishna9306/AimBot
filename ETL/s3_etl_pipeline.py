@@ -167,6 +167,7 @@ def tour_data_etl(tour):
                                     'home_team_acronym': TEAMS[player['home_team_id']]['acronym'] if player['home_team_id'] in TEAMS else None,
                                     'home_league_name': TEAMS[player['home_team_id']]['home_league_name'] if player['home_team_id'] in TEAMS else None,
                                     'region': TEAMS[player['home_team_id']]['region'] if player['home_team_id'] in TEAMS else None,
+                                    'tournament': tour,
                                     # player's overall performance across all games
                                     'career_statistics': {},
                                     # categorize game statistics per agent/role
@@ -332,7 +333,7 @@ def tour_data_etl(tour):
                     if year == 2024:
                         print(f'Error: File for {game} not found')
 
-            if i == 10:
+            if i == 100:
                 break
 
         # Calculating all average statistics per player and per agent per player
