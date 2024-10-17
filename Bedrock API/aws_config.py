@@ -3,8 +3,10 @@ from opensearchpy import AWSV4SignerAuth
 
 # Primary region of choice
 REGION = 'us-west-2'
+
 # Bucket name w/ the dataset
 S3_BUCKET = 'esports-digital-assistant-data'
+
 # AOSS vector store name
 AOSS_COLLECTION = {
     'name': 'bedrock-rag-collection',
@@ -13,6 +15,7 @@ AOSS_COLLECTION = {
 }
 # AOSS index name
 INDEX_NAME = 'bedrock-rag-index'
+
 # Bedrock Knowledge Base
 BEDROCK_KB = {
     'name': 'esports-digital-assistant-kb',
@@ -30,6 +33,19 @@ BEDROCK_KB_DATA_SOURCE = {
 # Bedrock KB Exection role
 BEDROCK_KB_EXECUTION_ROLE = {
     'name': 'Bedrock-Execution-Role-KB',
+    'arn': None
+}
+
+# Bedrock Agent
+BEDROCK_AGENT = {
+    'name': 'esports-digital-assistant',
+    'description': None,
+    'id': None,
+    'arn': None
+}
+# Bedrock Agent Execution Role
+BEDROCK_AGENT_EXECUTION_ROLE = {
+    'name': 'Bedrock-Execution-Role-Agent',
     'arn': None
 }
 
