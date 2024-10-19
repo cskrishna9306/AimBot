@@ -1,7 +1,7 @@
 import json
 import time
 from botocore.exceptions import ClientError
-from iam_manager import create_bedrock_kb_execution_role, create_oss_policies
+from iam_manager import create_bedrock_agent_execution_role, create_bedrock_kb_execution_role, create_oss_policies
 from retrying import retry
 from opensearchpy import OpenSearch, RequestsHttpConnection, RequestError
 from aws_config import *
@@ -33,12 +33,10 @@ def create_aoss_vector_store():
         
         # wait for collection creation
         # This can take couple of minutes to finish
-        response = aoss_client.batch_get_collection(names=[AOSS_COLLECTION['name']])
         # Periodically check collection status
-        while response['collectionDetails'][0]['status'] == 'CREATING':
+        while aoss_client.batch_get_collection(names=[AOSS_COLLECTION['name']])['collectionDetails'][0]['status'] == 'CREATING':
             print('Creating collection...')
             interactive_sleep(30)
-            response = aoss_client.batch_get_collection(names=[AOSS_COLLECTION['name']])
         print(f"Collection {AOSS_COLLECTION['name']} created successfully.")
     except ClientError as e:
         # Handle the case where the collection already exists
@@ -52,9 +50,11 @@ def create_aoss_vector_store():
             # Re-raise the exception for other errors
             raise
     
+    # TODO: a simple bedrock kb execution role needs to be created before creating an AOSS collection (w/ s3 and fm policies)
+    # Then, we attach the OSS policy to the role after the collection has been created
+    # Consequently, we have to create the OSS policies before the actual collection creation
     # Creating bedrock execution role with relevant S3, Bedrock FM, and AOSS access
     create_bedrock_kb_execution_role()
-
     # Creating security, network and data access policies within OSS (handles deletion of existing policies as well)
     create_oss_policies()
     
@@ -116,6 +116,7 @@ def create_aoss_vector_index():
 # Function definition to create the knowledge base and associate it with the AOSS collection
 @retry(wait_random_min=1000, wait_random_max=2000,stop_max_attempt_number=7)
 def create_bedrock_knowledge_base():
+    
     try:
         knowledge_base = bedrock_agent_client.create_knowledge_base(
             name = BEDROCK_KB['name'],
@@ -144,7 +145,7 @@ def create_bedrock_knowledge_base():
         
         BEDROCK_KB['id'] = knowledge_base['knowledgeBase']['knowledgeBaseId']
         BEDROCK_KB['arn'] = knowledge_base['knowledgeBase']['knowledgeBaseArn']
-        
+
         # Get knowledge base status
         while knowledge_base['knowledgeBase']['status'] == 'CREATING' :
             knowledge_base = bedrock_agent_client.get_knowledge_base(knowledgeBaseId = BEDROCK_KB['id']) 
@@ -154,10 +155,10 @@ def create_bedrock_knowledge_base():
     except ClientError as e:
         # you can delete the KB if its already exists
         if e.response['Error']['Code'] == 'ConflictException':
-            print(f"{BEDROCK_KB['name']} already exists. No action needed.")
             
-            # BEDROCK_KB['id'] = knowledge_base['knowledgeBase']['knowledgeBaseId']
-            # BEDROCK_KB['arn'] = knowledge_base['knowledgeBase']['knowledgeBaseArn']
+            # TODO: Search for the knowledge base
+            BEDROCK_KB['id'] = knowledge_base['knowledgeBase']['knowledgeBaseId']
+            BEDROCK_KB['arn'] = knowledge_base['knowledgeBase']['knowledgeBaseArn']
     
     return
     
@@ -208,9 +209,9 @@ def start_ingestion_job():
     )
     
     # Get job 
-    while job['ingestionJob']['status'] == 'CREATING':
+    while job['ingestionJob']['status'] in ['STARTING', 'IN PROGRESS']:
         job = bedrock_agent_client.get_ingestion_job(
-        knowledgeBaseId = BEDROCK_KB['id'],
+            knowledgeBaseId = BEDROCK_KB['id'],
             dataSourceId = BEDROCK_KB_DATA_SOURCE['id'],
             ingestionJobId = job["ingestionJobId"]
         )
@@ -220,8 +221,41 @@ def start_ingestion_job():
     print(f"Successfully synced data from data source {BEDROCK_KB_DATA_SOURCE['name']}")
     
     return
+
+def create_bedrock_agent():
+    # Creating bedrock agent execution role with relevant Bedrock FM and KB access
+    create_bedrock_agent_execution_role()
+    
+    try:
+        agent = bedrock_agent_client.create_agent(
+            agentName = BEDROCK_AGENT['name'],
+            description = BEDROCK_AGENT['description'],
+            instruction = BEDROCK_AGENT['instruction'],
+            agentResourceRoleArn = BEDROCK_AGENT_EXECUTION_ROLE['arn'],
+            idleSessionTTLInSeconds=1800,
+            foundationModel = FOUNDATION_MODEL,
+            tags=TAGS_DICT
+        )
+        
+        BEDROCK_AGENT['id'] = agent['agent']['agentId']
+        BEDROCK_KB['arn'] = knowledge_base['knowledgeBase']['knowledgeBaseArn']
+        
+        # Get knowledge base status
+        while knowledge_base['knowledgeBase']['status'] == 'CREATING' :
+            knowledge_base = bedrock_agent_client.get_knowledge_base(knowledgeBaseId = BEDROCK_KB['id']) 
+            interactive_sleep(5)
+            
+        print(f"Successfully created the {BEDROCK_AGENT['name']} Agent.")
+    except ClientError as e:
+        # you can delete the agent if it already exists
+        if e.response['Error']['Code'] == 'ConflictException':
+            print(f"{BEDROCK_AGENT['name']} already exists. No action needed.")
+            
+            # BEDROCK_KB['id'] = knowledge_base['knowledgeBase']['knowledgeBaseId']
+            # BEDROCK_KB['arn'] = knowledge_base['knowledgeBase']['knowledgeBaseArn']
+    pass
   
-if __name__ == "__main__":
+def main():
     # create the OpenSearch collection
     create_aoss_vector_store()
     # create vector index in OpenSearch serverless
@@ -232,4 +266,11 @@ if __name__ == "__main__":
     create_data_source()
     # start an ingestion job for the data source to start syncing data
     start_ingestion_job()
+    # create bedrock agent and 
+    create_bedrock_agent()
+    
+    return
+    
+if __name__ == "__main__":
+    main()
 
