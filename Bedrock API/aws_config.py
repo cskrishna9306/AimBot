@@ -15,6 +15,21 @@ AOSS_COLLECTION = {
 }
 # AOSS index name
 INDEX_NAME = 'bedrock-rag-index'
+# AOSS security policy names
+AOSS_POLICY_NAMES = [
+    {
+        'name': 'bedrock-rag-encryption-policy',
+        'type': 'encryption'
+    },
+    {
+        'name': 'bedrock-rag-network-policy',
+        'type': 'network'
+    },
+    {
+        'name': 'bedrock-rag-access-policy',
+        'type': 'data'
+    }
+]
 
 # Bedrock Knowledge Base
 BEDROCK_KB = {
@@ -35,11 +50,14 @@ BEDROCK_KB_EXECUTION_ROLE = {
     'name': 'Bedrock-Execution-Role-KB',
     'arn': None
 }
+# Bedrock KB policy names
+BEDROCK_KB_POLICY_NAMES = ['Bedrock-FM-Policy-KB', 'Bedrock-S3-Policy-KB', 'Bedrock-OSS-Policy-KB']
 
 # Bedrock Agent
 BEDROCK_AGENT = {
     'name': 'esports-digital-assistant',
-    'description': None,
+    'description': 'Valorant Esports Digital Assistant that is responsible for creating a Valorant team of 5 players with the best overall performance.',
+    'instruction': 'You are an esports digital assistant tasked with gathering player statistics and creating a team of 5 players with best overall performance.',
     'id': None,
     'arn': None
 }
@@ -48,6 +66,11 @@ BEDROCK_AGENT_EXECUTION_ROLE = {
     'name': 'Bedrock-Execution-Role-Agent',
     'arn': None
 }
+# Bedrock Agent Policy names
+BEDROCK_AGENT_POLICY_NAMES = ['Bedrock-FM-Policy-Agent', 'Bedrock-KB-Policy-Agent']
+
+# The FM used by the Bedrock agent
+FOUNDATION_MODEL = 'anthropic.claude-3-sonnet-20240229-v1:0'
 
 # Initializing the IAM client (global service)
 iam_client = boto3.client('iam')
