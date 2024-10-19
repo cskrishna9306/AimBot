@@ -42,10 +42,10 @@ def delete_bedrock_agent():
 def delete_data_source():
     try:
         # Loop through the data sources to find the one with the matching name
-        for data_source in bedrock_agent_client.list_data_sources(knowledgeBaseId=BEDROCK_KB['id'])['dataSources']:
+        for data_source in bedrock_agent_client.list_data_sources(knowledgeBaseId=BEDROCK_KB['id'])['dataSourceSummaries']:
             if data_source['name'] == BEDROCK_KB_DATA_SOURCE['name']:
                 # Return agent ID if found
-                BEDROCK_KB_DATA_SOURCE['id'] = data_source['id']
+                BEDROCK_KB_DATA_SOURCE['id'] = data_source['dataSourceId']
         
         bedrock_agent_client.delete_data_source(
             knowledgeBaseId = BEDROCK_KB['id'],
