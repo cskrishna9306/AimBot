@@ -7,7 +7,8 @@ from aws_config import *
 # to attach oss policy we need to create a collection first
 
 def create_bedrock_kb_execution_role():
-    IAM_POLICIES = [
+    # NOTE: Instead of maintaining separate policies for each resource, we could simply create a single policy with multiple statements in the same policy
+    BEDROCK_KB_IAM_POLICIES = [
         {
             'name': 'Bedrock-FM-Policy-KB',
             'arn': None,
@@ -15,14 +16,6 @@ def create_bedrock_kb_execution_role():
             'document': {
                 "Version": "2012-10-17",
                 "Statement": [
-                    {
-                        "Effect": "Allow",
-                        "Action": [
-                            "bedrock:ListFoundationModels",
-                            "bedrock:ListCustomModels"
-                        ],
-                        "Resource": "*"
-                    },
                     {
                         "Effect": "Allow",
                         "Action": [
@@ -83,55 +76,11 @@ def create_bedrock_kb_execution_role():
         }
     ]
     
-    def delete_bedrock_kb_execution_role():
-        # First, detach all the attached policies to the IAM role
-        for policy in IAM_POLICIES:
-            try:
-                iam_client.detach_role_policy(
-                    RoleName=BEDROCK_KB_EXECUTION_ROLE['name'],
-                    PolicyArn=f"arn:aws:iam::{ACCOUNT_ID}:policy/{policy['name']}"
-                )
-                print(f"Successfully detached the {policy['name']} IAM policy from the {BEDROCK_KB_EXECUTION_ROLE['name']} IAM role.")
-            except ClientError as e:
-                if e.response['Error']['Code'] == 'NoSuchEntityException':
-                    print(f"Either the IAM role {BEDROCK_KB_EXECUTION_ROLE['name']} or the IAM policy {policy['name']} does not exist.")
-                else:
-                    # Handle any other error
-                    print(f"An unexpected error occurred: {e}")
-                    raise
-
-        # Next, delete the Bedrock KB execution role
-        try:
-            iam_client.delete_role(RoleName=BEDROCK_KB_EXECUTION_ROLE['name'])
-            print(f"Successfully deleted the {BEDROCK_KB_EXECUTION_ROLE['name']} IAM role.")
-        except ClientError as e:
-            if e.response['Error']['Code'] == 'NoSuchEntityException':
-                print(f"The IAM role {BEDROCK_KB_EXECUTION_ROLE['name']} does not exist.")
-            else:
-                # Handle any other error
-                print(f"An unexpected error occurred: {e}")
-                raise
-            
-        # Finally, delete the IAM policies
-        for policy in IAM_POLICIES:
-            try:
-                iam_client.delete_policy(PolicyArn=f"arn:aws:iam::{ACCOUNT_ID}:policy/{policy['name']}")
-                print(f"Successfully deleted the {policy['name']} IAM policy.")
-            except ClientError as e:
-                if e.response['Error']['Code'] == 'NoSuchEntityException':
-                    print(f"The IAM policy {policy['name']} does not exist.")
-                else:
-                    # Handle any other error
-                    print(f"An unexpected error occurred: {e}")
-                    raise
-        
-        return
-    
     # first, create a clean slate by deleting the bedrock_kb_execution_role and all its attached IAM policies
-    delete_bedrock_kb_execution_role()
+    delete_iam_execution_role(BEDROCK_KB_EXECUTION_ROLE['name'], BEDROCK_KB_POLICY_NAMES)
     
     # now, create the FM, S3, and OSS IAM policies
-    for policy in IAM_POLICIES:
+    for policy in BEDROCK_KB_IAM_POLICIES:
         try:
             policy['arn'] = iam_client.create_policy(
                 PolicyName=policy['name'],
@@ -181,7 +130,7 @@ def create_bedrock_kb_execution_role():
             raise 
     
     # attach the above created policies to Amazon Bedrock execution role
-    for policy in IAM_POLICIES:
+    for policy in BEDROCK_KB_IAM_POLICIES:
         try:
             iam_client.attach_role_policy(
                 RoleName=BEDROCK_KB_EXECUTION_ROLE['name'],
@@ -191,17 +140,61 @@ def create_bedrock_kb_execution_role():
         except ClientError as e:
              # Check if the error code is 'EntityAlreadyExists'
             if e.response['Error']['Code'] == 'EntityAlreadyExists':
-                print(f"The {policy['name']} has already been attached to the bedrock execution role.")
+                print(f"The {policy['name']} has already been attached to the bedrock KB execution role.")
             else:
                 # Re-raise the error if it's not the expected one
                 raise 
     
     return
 
+def delete_iam_execution_role(iam_role_name, iam_policies):
+    # First, detach all the attached policies to the IAM role
+    for policy in iam_policies:
+        try:
+            iam_client.detach_role_policy(
+                RoleName=iam_role_name,
+                PolicyArn=f"arn:aws:iam::{ACCOUNT_ID}:policy/{policy}"
+            )
+            print(f"Successfully detached the {policy} IAM policy from the {iam_role_name} IAM role.")
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'NoSuchEntity':
+                print(f"Either the IAM role {iam_role_name} or the IAM policy {policy} does not exist.")
+            else:
+                # Handle any other error
+                print(f"An unexpected error occurred: {e}")
+                raise
+
+    # Next, delete the Bedrock KB execution role
+    try:
+        iam_client.delete_role(RoleName=iam_role_name)
+        print(f"Successfully deleted the {iam_role_name} IAM role.")
+    except ClientError as e:
+        if e.response['Error']['Code'] == 'NoSuchEntity':
+            print(f"The IAM role {iam_role_name} does not exist.")
+        else:
+            # Handle any other error
+            print(f"An unexpected error occurred: {e}")
+            raise
+        
+    # Finally, delete the IAM policies
+    for policy in iam_policies:
+        try:
+            iam_client.delete_policy(PolicyArn=f"arn:aws:iam::{ACCOUNT_ID}:policy/{policy}")
+            print(f"Successfully deleted the {policy} IAM policy.")
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'NoSuchEntity':
+                print(f"The IAM policy {policy} does not exist.")
+            else:
+                # Handle any other error
+                print(f"An unexpected error occurred: {e}")
+                raise
+    
+    return
+
 def create_oss_policies():
     
-    OSS_POLICIES = {
-        'Encryption_Policy': {
+    OSS_POLICIES = [
+        {
             'name': 'bedrock-rag-encryption-policy',
             'policy': {
                 'Rules': [
@@ -214,7 +207,7 @@ def create_oss_policies():
             },
             'type': 'encryption'
         },
-        'Network_Policy': {
+        {
             'name': 'bedrock-rag-network-policy',
             'policy': [
                 {
@@ -229,7 +222,7 @@ def create_oss_policies():
             ],
             'type': 'network'
         },
-        'Access_Policy': {
+        {
             'name': 'bedrock-rag-access-policy',
             'policy': [   
                 {
@@ -251,12 +244,15 @@ def create_oss_policies():
             ],
             'type': 'data'
         }
-    }
+    ]
+    
+    # first, create a clean slate by deleting all the OSS policies
+    delete_oss_policies()
     
     # Traverse through all the OSS Policies and accordingly create them
-    for policy_name, policy in OSS_POLICIES.items():
+    for policy in OSS_POLICIES:
         try:
-            if policy_name != 'Access_Policy':
+            if policy['name'] != 'bedrock-rag-access-policy':
                 aoss_client.create_security_policy(
                     name=policy['name'],
                     policy=json.dumps(policy['policy']),
@@ -273,38 +269,151 @@ def create_oss_policies():
             # Check for ConflictException
             if e.response['Error']['Code'] == 'ConflictException':
                 print(f"{policy['name']} already exists.")
-                
-                if policy_name != 'Access_Policy':
-                    # Delete this OSS policy
-                    aoss_client.delete_security_policy(
-                        name=policy['name'],
-                        type=policy['type']  # 'encryption', 'network', or 'data' for security; 'access' for access policies
-                    )
-                    print(f"Deleted the AOSS {policy['name']}.")
-                    
-                    # Recreate this OSS policy
-                    aoss_client.create_security_policy(
-                        name=policy['name'],
-                        policy=json.dumps(policy['policy']),
-                        type=policy['type']
-                    )
-                else:
-                    # Delete this OSS policy
-                    aoss_client.delete_access_policy(
-                        name=policy['name'],
-                        type=policy['type']  # 'encryption', 'network', or 'data' for security; 'access' for access policies
-                    )
-                    print(f"Deleted the AOSS {policy['name']}.")
-                    
-                    # Recreate this OSS policy
-                    aoss_client.create_access_policy(
-                        name=policy['name'],
-                        policy=json.dumps(policy['policy']),
-                        type=policy['type']
-                    )
-                print(f"Successfully created the AOSS {policy['name']}.")
             else:
                 # Handle other exceptions
                 raise
+    
+    return
+
+def delete_oss_policies():
+    for policy in AOSS_POLICY_NAMES:
+        try:
+            if policy['name'] != 'bedrock-rag-access-policy':
+                # Delete this OSS policy
+                aoss_client.delete_security_policy(
+                    name=policy['name'],
+                    type=policy['type']  # 'encryption', 'network', or 'data' for security; 'access' for access policies
+                )
+            else:
+                aoss_client.delete_access_policy(
+                    name=policy['name'],
+                    type=policy['type']  # 'encryption', 'network', or 'data' for security; 'access' for access policies
+                )
+            print(f"Deleted the AOSS {policy['name']}.")
+            pass
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'ResourceNotFoundException':
+                print(f"The OSS policy {policy['name']} does not exist.")
+            else:
+                # Handle any other error
+                print(f"An unexpected error occurred: {e}")
+                raise
+    pass
+
+def create_bedrock_agent_execution_role():
+    # NOTE: Instead of maintaining separate policies for each resource, we could simply create a single policy with multiple statements in the same policy
+    BEDROCK_AGENT_IAM_POLICIES = [
+        {
+            'name': 'Bedrock-FM-Policy-Agent',
+            'arn': None,
+            'description': 'Policy for accessing foundation model',
+            'document': {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Action": [
+                            "bedrock:InvokeModel",
+                        ],
+                        "Resource": [
+                            # Anthropic Claude 3 Sonnet
+                            f"arn:aws:bedrock:{REGION}::foundation-model/anthropic.claude-3-sonnet-20240229-v1:0",
+                            # Anthropic Claude 3 Haiku
+                            f"arn:aws:bedrock:{REGION}::foundation-model/anthropic.claude-3-haiku-20240307-v1:0"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            'name': 'Bedrock-KB-Policy-Agent',
+            'arn': None,
+            'description': 'Policy for accessing the Bedrock Knowledge Base.',
+            'document': {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Action": [
+                            "bedrock:Retrieve",
+                            "bedrock:RetrieveAndGenerate"
+                        ],
+                        "Resource": [
+                            f"arn:aws:bedrock:{REGION}:{ACCOUNT_ID}:knowledge-base/{BEDROCK_KB['id']}"
+                        ]
+                    }
+                ]
+            }
+        }
+    ]
+    
+    # first, create a clean slate by deleting the bedrock_agent_execution_role and all its attached IAM policies
+    delete_iam_execution_role(BEDROCK_AGENT_EXECUTION_ROLE['name'], BEDROCK_AGENT_POLICY_NAMES)
+    
+        # now, create the FM, S3, and OSS IAM policies
+    for policy in BEDROCK_AGENT_IAM_POLICIES:
+        try:
+            policy['arn'] = iam_client.create_policy(
+                PolicyName=policy['name'],
+                PolicyDocument=json.dumps(policy['document']),
+                Description=policy['description'],
+                Tags=TAGS_UPPER_CASE
+            )['Policy']['Arn']
+            print(f"Successfully created the {policy['name']} IAM policy.")
+        except ClientError as e:
+            # Check if the error code is 'EntityAlreadyExists'
+            if e.response['Error']['Code'] == 'EntityAlreadyExists':
+                print(f"The {policy['name']} IAM policy already exists.")
+            else:
+              # Re-raise the error if it's not the expected one
+                raise  
+    
+    # create the bedrock agent execution role
+    try:
+        BEDROCK_AGENT_EXECUTION_ROLE['arn'] = iam_client.create_role(
+            RoleName=BEDROCK_AGENT_EXECUTION_ROLE['name'],
+            AssumeRolePolicyDocument=json.dumps(
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "bedrock.amazonaws.com"
+                            },
+                            "Action": "sts:AssumeRole"
+                        }
+                    ]
+                }
+            ),
+            Description='Amazon Bedrock Agent Execution Role for accessing the FMs and Bedrock KB.',
+            MaxSessionDuration=3600,
+            Tags=TAGS_UPPER_CASE
+        )['Role']['Arn']
+        print(f"Successfully created the {BEDROCK_AGENT_EXECUTION_ROLE['name']} IAM role.")
+    except ClientError as e:
+        # Check if the error code is 'EntityAlreadyExists'
+        if e.response['Error']['Code'] == 'EntityAlreadyExists':
+            print('The Bedrock Agent IAM role already exists.')
+            BEDROCK_AGENT_EXECUTION_ROLE['arn'] = iam_client.get_role(RoleName=BEDROCK_AGENT_EXECUTION_ROLE['name'])['Role']['Arn']
+        else:
+            # Re-raise the error if it's not the expected one
+            raise 
+    
+    # attach the above created policies to Amazon Bedrock Agent execution role
+    for policy in BEDROCK_AGENT_IAM_POLICIES:
+        try:
+            iam_client.attach_role_policy(
+                RoleName=BEDROCK_KB_EXECUTION_ROLE['name'],
+                PolicyArn=policy['arn']
+            )
+            print(f"Succesfully attached the {policy['name']}.")
+        except ClientError as e:
+             # Check if the error code is 'EntityAlreadyExists'
+            if e.response['Error']['Code'] == 'EntityAlreadyExists':
+                print(f"The {policy['name']} has already been attached to the bedrock agent execution role.")
+            else:
+                # Re-raise the error if it's not the expected one
+                raise 
     
     return
