@@ -4,7 +4,6 @@ from iam_manager import delete_iam_execution_role, delete_oss_policies
 from aws_config import *
 
 def delete_bedrock_agent():
-    # TODO: We are assuming the knowledge base has been assigned, i.e., kb_rag_orchestration has been run (FALSE)
     # Loop through the agents to find the one with the matching name
     for agent in bedrock_agent_client.list_agents()['agentSummaries']:
         if agent['agentName'] == BEDROCK_AGENT['name']:
@@ -42,7 +41,7 @@ def delete_bedrock_agent():
 
 def delete_data_source():
     try:
-        # TODO: We are assuming the knowledge base has been assigned, i.e., kb_rag_orchestration has been run (FALSE)
+        # Loop through the data sources to find the one with the matching name
         for data_source in bedrock_agent_client.list_data_sources(knowledgeBaseId=BEDROCK_KB['id'])['dataSources']:
             if data_source['name'] == BEDROCK_KB_DATA_SOURCE['name']:
                 # Return agent ID if found
@@ -68,7 +67,6 @@ def delete_data_source():
 
 def delete_bedrock_knowledge_base():
     try:
-        # TODO: We are assuming the knowledge base has been assigned, i.e., kb_rag_orchestration has been run (FALSE)
         bedrock_agent_client.delete_knowledge_base(knowledgeBaseId = BEDROCK_KB['id'])
         time.sleep(10)
         print(f"Successfully deleted the Bedrock Knowledge Base {BEDROCK_KB['name']}")
@@ -88,13 +86,12 @@ def delete_bedrock_knowledge_base():
     return
 
 def delete_aoss_vector_store():
-    
+    # Loop through the AOSS collections to find the one with the matching name
     for collection in aoss_client.list_collections()['collectionSummaries']:
         if collection['name'] == AOSS_COLLECTION['name']:
                 AOSS_COLLECTION['id'] = collection['id']
     
     try:
-        # TODO: We are assuming the vector store ID has been assigned, i.e., kb_rag_orchestration has been run (FALSE)
         aoss_client.delete_collection(id=AOSS_COLLECTION['id'])
         time.sleep(10)
         print(f"Successfully deleted the AOSS Collection {AOSS_COLLECTION['name']}")
