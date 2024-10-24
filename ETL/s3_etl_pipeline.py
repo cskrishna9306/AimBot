@@ -26,13 +26,13 @@ paginator = s3_client.get_paginator('list_objects_v2')
 # the source S3 bucket with the zipped data to extract from
 SOURCE_S3_BUCKET = 'vcthackathon-data'
 # the destination bucket to store the unzipped and transformed data
-DESTINATION_S3_BUCKET = 'esports-digital-assistant-data'
+DESTINATION_S3_BUCKET = 'esports-digital-assistant-data-2'
 
 # the 3 tours/tiers within VCT and their respective active years
 TOURS = {
-    'game-changers': [2022, 2023, 2024],
+    # 'game-changers': [2022, 2023, 2024],
     'vct-challengers': [2023, 2024],
-    'vct-international': [2022, 2023, 2024]
+    # 'vct-international': [2022, 2023, 2024]
 }
 
 # the order to traverse the files in esports-data
@@ -48,11 +48,11 @@ def extract_zipped_data(bucket, key):
         # Download the gzip file from the source S3 bucket
         gzip_obj = s3_client.get_object(Bucket=bucket, Key=key)
         gzip_content = gzip_obj['Body'].read()
-    
+
         # Unzip the gzipped content
         with gzip.GzipFile(fileobj=BytesIO(gzip_content)) as gzip_file:
             return gzip_file.read()
-    
+
     except NoCredentialsError:
         print("Error: Credentials are not available")
     except PartialCredentialsError:
@@ -72,12 +72,12 @@ def calculate_avg_statistics(player):
     # calculate average kills per round
     player['avg_kills_per_round'] = round((player['total_attack_kills'] + player['total_defense_kills']) / max(1, player['total_rounds_played']), 2)
     player['avg_assists_per_round'] = round((player['total_attack_assists'] + player['total_defense_assists']) / max(1, player['total_rounds_played']), 2)
-            
+
     # delete the total kills, assists, and deaths
     for i in ['kills', 'assists', 'deaths']:
         del player[f'total_attack_{i}']
         del player[f'total_defense_{i}']
-            
+
     # List of statistics other than the attack/defense KDA, average kills and assists
     stats = ['combat_score', 'revives', 'damage_dealt', 'first_bloods', 'first_deaths']
     for stat in stats:
@@ -85,10 +85,10 @@ def calculate_avg_statistics(player):
         player[f'avg_{stat}_per_round'] = round(player[f'total_{stat}'] / max(1, player['total_rounds_played']), 2)
         # Deleting the total statistic from this player's summary
         del player[f'total_{stat}']
-    
+
     return player
 
-# Function definition to extract zipped fandom data from the source S3 bucket, 
+# Function definition to extract zipped fandom data from the source S3 bucket,
 # and load the unzipped data into our destination S3 bucket
 def fandom_data_etl():
     # Traverse the fandom file path in the source S3 bucket
@@ -97,7 +97,7 @@ def fandom_data_etl():
         if 'Contents' in page:
             for object in page['Contents']:
                 key = object['Key']
-                
+
                 # extract, unzip, and load the unzipped data into the destination S3 bucket
                 s3_client.put_object(Bucket=DESTINATION_S3_BUCKET, Key=key[:-3], Body=extract_zipped_data(bucket=SOURCE_S3_BUCKET, key=key))
                 print(f"Uploaded unzipped file to {DESTINATION_S3_BUCKET}/{key[:-3]}")
@@ -119,93 +119,93 @@ def tour_data_etl(tour):
     GAMES = {}
 
     # Function definition to load esports data from this tour into one of the above hashmaps
-    def esports_data_etl(load = False):
+    def esports_data_etl():
         # Traverse the esports-data by leagues, tournaments, teams, players, and finally games
         for file in ESPORTS_DATA:
             # EXRTACTION PHASE
             JSON_FILE = json.loads(extract_zipped_data(SOURCE_S3_BUCKET, f'{tour}/esports-data/{file}.json.gz'))
-            
+
             # TRANSFORMATION PHASE
-            match file:
-                case 'leagues':
-                    for league in JSON_FILE:
-                        LEAGUES[league['league_id']] = {
-                            'name': league['name'],
-                            'region': league['region']
-                        }
-                case 'tournaments':
-                    for tournament in JSON_FILE:
-                        TOURNAMENTS[tournament['id']] = {
-                            'name': tournament['name'],
-                            'league_name': LEAGUES[tournament['league_id']]['name'],
-                            # NOTE: we may or may not need this
-                            'region': LEAGUES[tournament['league_id']]['region']
-                        }
-                case 'teams':
-                    for team in JSON_FILE:
-                        TEAMS[team['id']] = {
-                            'name': team['name'],
-                            'acronym': team['acronym'],
-                            'home_league_name': LEAGUES[team['home_league_id']]['name'],
-                            'region': LEAGUES[team['home_league_id']]['region']
-                        }
-                case 'players':
-                    # TODO: figure out logic to map the players to the right team for that year
-                    # owing to increasing complexity of keeping track of the changing teams for each player, 
-                    # we decided to only retain the most recent information of the player
-                    for player in JSON_FILE:
-                        # get the 'created_at' for this player entry
-                        date = datetime.strptime(player['updated_at'], "%Y-%m-%dT%H:%M:%SZ")
-                        if (player['id'] in PLAYERS and date > PLAYERS[player['id']]['date']) or player['id'] not in PLAYERS:
-                                PLAYERS[player['id']] = {
-                                    'handle': player['handle'],
-                                    'date': date,
-                                    'status': player['status'],
-                                    'first_name': player['first_name'],
-                                    'last_name': player['last_name'],
-                                    'home_team_name': TEAMS[player['home_team_id']]['name'] if player['home_team_id'] in TEAMS else None,
-                                    'home_team_acronym': TEAMS[player['home_team_id']]['acronym'] if player['home_team_id'] in TEAMS else None,
-                                    'home_league_name': TEAMS[player['home_team_id']]['home_league_name'] if player['home_team_id'] in TEAMS else None,
-                                    'region': TEAMS[player['home_team_id']]['region'] if player['home_team_id'] in TEAMS else None,
-                                    'tournament': tour,
-                                    # player's overall performance across all games
-                                    'career_statistics': {},
-                                    # categorize game statistics per agent/role
-                                    'player_statistics_per_agent': {}
-                                }
-                case 'mapping_data':
-                    for game in JSON_FILE:
-                        GAMES[game['platformGameId']] = {
-                            'tournament': TOURNAMENTS[game['tournamentId']]['name'],
-                            'region': TOURNAMENTS[game['tournamentId']]['region'],
-                            # NOTE: We may or may not need the teams field since we can map each player to their respective teams with the PLAYERS dict
-                            'teams': {
-                                int(localTeamID): teamID for localTeamID, teamID in game['teamMapping'].items()
-                            },
-                            'players': {
-                                int(localPlayerID): playerID for localPlayerID, playerID in game['participantMapping'].items()
+            # match file:
+            if file == 'leagues':
+                for league in JSON_FILE:
+                    LEAGUES[league['league_id']] = {
+                        'name': league['name'],
+                        'region': league['region']
+                    }
+            elif file == 'tournaments':
+                for tournament in JSON_FILE:
+                    TOURNAMENTS[tournament['id']] = {
+                        'name': tournament['name'],
+                        'league_name': LEAGUES[tournament['league_id']]['name'],
+                        # NOTE: we may or may not need this
+                        'region': LEAGUES[tournament['league_id']]['region']
+                    }
+            elif file == 'teams':
+                for team in JSON_FILE:
+                    TEAMS[team['id']] = {
+                        'name': team['name'],
+                        'acronym': team['acronym'],
+                        'home_league_name': LEAGUES[team['home_league_id']]['name'],
+                        'region': LEAGUES[team['home_league_id']]['region']
+                    }
+            elif file== 'players':
+                # TODO: figure out logic to map the players to the right team for that year
+                # owing to increasing complexity of keeping track of the changing teams for each player,
+                # we decided to only retain the most recent information of the player
+                for player in JSON_FILE:
+                    # get the 'created_at' for this player entry
+                    date = datetime.strptime(player['updated_at'], "%Y-%m-%dT%H:%M:%SZ")
+                    if (player['id'] in PLAYERS and date > PLAYERS[player['id']]['date']) or player['id'] not in PLAYERS:
+                            PLAYERS[player['id']] = {
+                                'handle': player['handle'],
+                                'date': date,
+                                'status': player['status'],
+                                'first_name': player['first_name'],
+                                'last_name': player['last_name'],
+                                'home_team_name': TEAMS[player['home_team_id']]['name'] if player['home_team_id'] in TEAMS else None,
+                                'home_team_acronym': TEAMS[player['home_team_id']]['acronym'] if player['home_team_id'] in TEAMS else None,
+                                'home_league_name': TEAMS[player['home_team_id']]['home_league_name'] if player['home_team_id'] in TEAMS else None,
+                                'region': TEAMS[player['home_team_id']]['region'] if player['home_team_id'] in TEAMS else None,
+                                'tournament': tour,
+                                # player's overall performance across all games
+                                'career_statistics': {},
+                                # categorize game statistics per agent/role
+                                'player_statistics_per_agent': {}
                             }
+            elif file== 'mapping_data':
+                for game in JSON_FILE:
+                    GAMES[game['platformGameId']] = {
+                        'tournament': TOURNAMENTS[game['tournamentId']]['name'],
+                        'region': TOURNAMENTS[game['tournamentId']]['region'],
+                        # NOTE: We may or may not need the teams field since we can map each player to their respective teams with the PLAYERS dict
+                        'teams': {
+                            int(localTeamID): teamID for localTeamID, teamID in game['teamMapping'].items()
+                        },
+                        'players': {
+                            int(localPlayerID): playerID for localPlayerID, playerID in game['participantMapping'].items()
                         }
-            
+                    }
+
         for pID, pInfo in PLAYERS.items():
             # iterate through key-value pairs in pInfo
             for key, value in pInfo.items():
                 PLAYERS[pID][key] = value.isoformat() if isinstance(value, datetime) else value
-        
+
         # LOADING PHASE: Optionally LOAD players metadata into the destination S3 bucket
-        if load:
-            # Upload the PLAYERS dictionary to our destination S3 bucket
-            s3_client.put_object(Bucket=DESTINATION_S3_BUCKET, Key=f'{tour}/player_metadata.json', Body=json.dumps(PLAYERS))
-            print(f"Uploaded {tour}' players' metadata information to s3://{DESTINATION_S3_BUCKET}/{tour}/player_metadata.json")
-        
+        # if load:
+        #     # Upload the PLAYERS dictionary to our destination S3 bucket
+        #     s3_client.put_object(Bucket=DESTINATION_S3_BUCKET, Key=f'{tour}/player_metadata.json', Body=json.dumps(PLAYERS))
+        #     print(f"Uploaded {tour}' players' metadata information to s3://{DESTINATION_S3_BUCKET}/{tour}/player_metadata.json")
+
         return
 
     # Function definition to load and transform player specific data
     def game_data_etl():
         i = 0
-        # list of all trackable metrics                            
+        # list of all trackable metrics
         STATS = ['total_rounds_played', 'total_attack_kills', 'total_defense_kills', 'total_attack_assists', 'total_defense_assists', 'total_attack_deaths', 'total_defense_deaths', 'total_revives', 'total_damage_dealt', 'total_combat_score', 'total_first_bloods', 'total_first_deaths']
-        
+
         # parse though each game within GAMES
         for game, game_metadata in GAMES.items():
             # check for a hit for this game within {tour}/games/[2022, 2023, 2024]
@@ -214,10 +214,10 @@ def tour_data_etl(tour):
                     # EXTRACTION PHASE
                     # check for this file within this year's directory
                     s3_client.head_object(Bucket=SOURCE_S3_BUCKET, Key=f'{tour}/games/{year}/{game}.json.gz')
-                    
+
                     # upon a hit, we extract, and perform transformation on the unzipped data
                     gameJSON = json.loads(extract_zipped_data(SOURCE_S3_BUCKET, f'{tour}/games/{year}/{game}.json.gz'))
-                    
+
                     # TRANSFORMATION PHASE
                     # Assuming players 6 - 10 are always assigned the lower team number and start as attacker (vice versa for players 1 - 5)
                     team_player_mappings = {
@@ -256,7 +256,7 @@ def tour_data_etl(tour):
                         if 'configuration' in event and not config_handled:
                             # Ensure that the 'configuration' event is only handled once
                             config_handled = True
-                                
+
                             # assign agent information per player to their respective summaries
                             for player in event['configuration']['players']:
                                 if player['selectedAgent']['fallback']['guid'] in AGENT_CODE_MAPPINGS:
@@ -276,27 +276,27 @@ def tour_data_etl(tour):
                         elif 'playerDied' in event:
                             deceasedId = event['playerDied']['deceasedId']['value']
                             killerId = event['playerDied']['killerId']['value']
-                            
+
                             # check if this was first blood
                             if not first_blood:
                                 first_blood = True
                                 game_summary[killerId]['total_first_bloods'] += 1
                                 game_summary[deceasedId]['total_first_deaths'] += 1
                                 pass
-                            
+
                             game_summary[deceasedId][f"total_{'attack' if deceasedId in team_player_mappings[attacking_team] else 'defense'}_deaths"] += 1
                             game_summary[killerId][f"total_{'attack' if killerId in team_player_mappings[attacking_team] else 'defense'}_kills"] += 1
 
                             # calculate assists
                             for assistant in event['playerDied']['assistants']:
                                 game_summary[assistant['assistantId']['value']][f"total_{'attack' if killerId in team_player_mappings[attacking_team] else 'defense'}_assists"] += 1
-                        
+
                         elif 'playerRevived' in event:
                             game_summary[event['playerRevived']['revivedById']['value']]['total_revives'] += 1
                         elif 'snapshot' in event:
                             for player in event['snapshot']['players']:
                                 game_summary[player['playerId']['value']]['total_combat_score'] = player['scores']['combatScore']['totalScore']
-                    
+
                     # Joining each player's statistics from this game to their respective entries in PLAYERS
                     for localPlayerID, playerID in game_metadata['players'].items():
                         if playerID in PLAYERS:
@@ -312,7 +312,7 @@ def tour_data_etl(tour):
                             # check to see if this is the player's first time playing this role
                             if current_player['role'] not in PLAYERS[playerID]['player_statistics_per_agent']:
                                 PLAYERS[playerID]['player_statistics_per_agent'][current_player['role']] = {}
-                            
+
                             # check to see if this is the player's first time playing this agent
                             if current_player['agent'] not in PLAYERS[playerID]['player_statistics_per_agent'][current_player['role']]:
                                 PLAYERS[playerID]['player_statistics_per_agent'][current_player['role']][current_player['agent']] = {
@@ -322,19 +322,19 @@ def tour_data_etl(tour):
                             for stat in STATS:
                                 PLAYERS[playerID]['career_statistics'][stat] += current_player[stat]
                                 PLAYERS[playerID]['player_statistics_per_agent'][current_player['role']][current_player['agent']][stat] += current_player[stat]
-                    
+
                     # DEBUG statement
                     print(f'Succesfully retreived player stats from {tour}/games/{year}/{game}.json.gz')
                     i += 1
-                    
+
                     # need to only find the first hit
                     break
                 except botocore.exceptions.ClientError as e:
                     if year == 2024:
                         print(f'Error: File for {game} not found')
 
-            if i == 100:
-                break
+            # if i == 100:
+            #     break
 
         # Calculating all average statistics per player and per agent per player
         PLAYERS_LIST = []
@@ -348,16 +348,16 @@ def tour_data_etl(tour):
                 for _, role in player['player_statistics_per_agent'].items():
                     for _, agent in role.items():
                         calculate_avg_statistics(agent)
-            
+
             PLAYERS_LIST.append(player)
-        
+
         # LOADING PHASE
         # Upload the PLAYERS dictionary to our destination S3 bucket
         s3_client.put_object(Bucket=DESTINATION_S3_BUCKET, Key=f'{tour}/player_statistics.json', Body=json.dumps(PLAYERS_LIST))
         print(f"Uploaded {tour}' players' statistics information to s3://{DESTINATION_S3_BUCKET}/{tour}/player_statistics.json")
 
         return
-    
+
     # loading leagues, tournaments, teams, and players data from this tour into the cache
     esports_data_etl()
     # creating player statistics from each game
@@ -366,7 +366,7 @@ def tour_data_etl(tour):
 
 if __name__ == "__main__":
     # extract, unzip, and load the fandom data
-    fandom_data_etl()
+    # fandom_data_etl()
 
     # extract, unzip, and transform each tour data
     for tour in TOURS:
