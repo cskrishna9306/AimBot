@@ -15,7 +15,7 @@ FILTER_STATS = {
 def filter_top_players(tour):
     
     # Open and load the JSON file
-    with open(f'{tour}.json', 'r') as file:
+    with open(f'../Valorant Metadata/{tour}.json', 'r') as file:
         player_list = json.load(file)
     
     # Remove players with blank career stats
@@ -37,7 +37,7 @@ def filter_top_players(tour):
                 break
 
     # put modified file into a new file
-    with open(f'{tour}-100.json', 'w') as file:
+    with open(f'../Valorant Metadata/{tour}-100.json', 'w') as file:
         json.dump(list(TOP_100[tour].values()), file, indent=4)
     
     return
