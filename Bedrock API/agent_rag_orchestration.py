@@ -125,7 +125,12 @@ def create_bedrock_knowledge_base():
             knowledgeBaseConfiguration = {
                 "type": "VECTOR",
                 "vectorKnowledgeBaseConfiguration": {
-                    "embeddingModelArn": f"arn:aws:bedrock:{REGION}::foundation-model/amazon.titan-embed-text-v1"
+                    "embeddingModelArn": f"arn:aws:bedrock:{REGION}::foundation-model/amazon.titan-embed-text-v2:0",
+                    'embeddingModelConfiguration': {
+                        'bedrockEmbeddingModelConfiguration': {
+                            'dimensions': 1024
+                        }
+                    }
                 }
             },
             storageConfiguration = {
@@ -238,14 +243,24 @@ def create_bedrock_agent():
         )
         
         BEDROCK_AGENT['id'] = agent['agent']['agentId']
-        BEDROCK_KB['arn'] = knowledge_base['knowledgeBase']['knowledgeBaseArn']
+        BEDROCK_AGENT['arn'] = agent['agent']['agentArn']
+        BEDROCK_AGENT['version'] = agent['agent']['agentVersion']
         
         # Get knowledge base status
-        while knowledge_base['knowledgeBase']['status'] == 'CREATING' :
-            knowledge_base = bedrock_agent_client.get_knowledge_base(knowledgeBaseId = BEDROCK_KB['id']) 
+        while agent['agent']['status'] == 'CREATING' :
+            agent = bedrock_agent_client.get_agent(agentId = BEDROCK_AGENT['id']) 
             interactive_sleep(5)
             
         print(f"Successfully created the {BEDROCK_AGENT['name']} Agent.")
+        
+        # Associate the bedrock associate to the created knowledge base
+        bedrock_agent_client.associate_agent_knowledge_base(
+            agentId = BEDROCK_AGENT['id'],
+            agentVersion = 'string',
+            description = '',
+            knowledgeBaseId = BEDROCK_KB['id'],
+            knowledgeBaseState = 'ENABLED'
+        )
     except ClientError as e:
         # you can delete the agent if it already exists
         if e.response['Error']['Code'] == 'ConflictException':
@@ -266,7 +281,7 @@ def main():
     create_data_source()
     # start an ingestion job for the data source to start syncing data
     start_ingestion_job()
-    # create bedrock agent and 
+    # create bedrock agent and associate the knowledge base to this agent
     create_bedrock_agent()
     
     return

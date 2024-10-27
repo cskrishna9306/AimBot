@@ -1,8 +1,11 @@
 import json
+import boto3
 
 TOURS = ['game-changers', 'vct-challengers', 'vct-international']
 
 TOP_100 = {tour: {} for tour in TOURS}
+
+s3_client = boto3.client('s3')
 
 FILTER_STATS = {
     'avg_combat_score_per_round': 30,
@@ -42,10 +45,22 @@ def filter_top_players(tour):
     
     return
 
+def chunk_players_into_files(tour):
+    # Retrieve the json file with players
+    with open(f'../Valorant Metadata/{tour}-100.json', 'r') as file:
+        PLAYERS = json.load(file)
+        
+    for player in PLAYERS:
+        # Upload this player's stats into its own json file
+        s3_client.put_object(Bucket='esports-digital-assistant-data', Key=f"final-players-chunk/{tour}/{player['handle']}.json", Body=json.dumps(player))
+        
+    return
+
 def main():
     # Iterate over all the VCT tournaments
     for tour in TOURS:
         filter_top_players(tour)
+        chunk_players_into_files(tour)
     
     return
         

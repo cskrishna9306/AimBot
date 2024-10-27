@@ -22,7 +22,6 @@ def create_bedrock_kb_execution_role():
                             "bedrock:InvokeModel",
                         ],
                         "Resource": [
-                            f"arn:aws:bedrock:{REGION}::foundation-model/amazon.titan-embed-text-v1",
                             f"arn:aws:bedrock:{REGION}::foundation-model/amazon.titan-embed-text-v2:0"
                         ]
                     }
@@ -44,7 +43,7 @@ def create_bedrock_kb_execution_role():
                         ],
                         "Resource": [
                             f"arn:aws:s3:::{S3_BUCKET}",
-                            f"arn:aws:s3:::{S3_BUCKET}/*"
+                            f"arn:aws:s3:::{S3_BUCKET}/final-players/*"
                         ],
                         "Condition": {
                             "StringEquals": {
@@ -350,7 +349,7 @@ def create_bedrock_agent_execution_role():
     # first, create a clean slate by deleting the bedrock_agent_execution_role and all its attached IAM policies
     delete_iam_execution_role(BEDROCK_AGENT_EXECUTION_ROLE['name'], BEDROCK_AGENT_POLICY_NAMES)
     
-        # now, create the FM, S3, and OSS IAM policies
+    # now, create the FM and KB IAM policies
     for policy in BEDROCK_AGENT_IAM_POLICIES:
         try:
             policy['arn'] = iam_client.create_policy(
@@ -404,7 +403,7 @@ def create_bedrock_agent_execution_role():
     for policy in BEDROCK_AGENT_IAM_POLICIES:
         try:
             iam_client.attach_role_policy(
-                RoleName=BEDROCK_KB_EXECUTION_ROLE['name'],
+                RoleName=BEDROCK_AGENT_EXECUTION_ROLE['name'],
                 PolicyArn=policy['arn']
             )
             print(f"Succesfully attached the {policy['name']}.")

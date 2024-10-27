@@ -202,12 +202,7 @@ def tour_data_etl(tour):
 
     # Function definition to load and transform player specific data
     def game_data_etl():
-<<<<<<< HEAD
-        i = 0
-        # list of all trackable metrics
-=======
         # list of all trackable metrics                            
->>>>>>> 5a28d4f5fd5ea22dc705379a379de079ae0c3f57
         STATS = ['total_rounds_played', 'total_attack_kills', 'total_defense_kills', 'total_attack_assists', 'total_defense_assists', 'total_attack_deaths', 'total_defense_deaths', 'total_revives', 'total_damage_dealt', 'total_combat_score', 'total_first_bloods', 'total_first_deaths']
 
         # parse though each game within GAMES
@@ -329,24 +324,14 @@ def tour_data_etl(tour):
 
                     # DEBUG statement
                     print(f'Succesfully retreived player stats from {tour}/games/{year}/{game}.json.gz')
-<<<<<<< HEAD
-                    i += 1
-
-=======
                     
->>>>>>> 5a28d4f5fd5ea22dc705379a379de079ae0c3f57
                     # need to only find the first hit
                     break
                 except botocore.exceptions.ClientError as e:
                     if year == 2024:
                         print(f'Error: File for {game} not found')
 
-<<<<<<< HEAD
-            # if i == 100:
-            #     break
 
-=======
->>>>>>> 5a28d4f5fd5ea22dc705379a379de079ae0c3f57
         # Calculating all average statistics per player and per agent per player
         PLAYERS_LIST = []
         for _, player in PLAYERS.items():
